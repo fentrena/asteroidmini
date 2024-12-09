@@ -29,6 +29,38 @@
             overflow: hidden;
             touch-action: manipulation; /* Prevent default touch behaviors like double-tap zoom */
         }
+        /* Meteor Shower Background */
+        .meteorShower {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 0; /* Behind stars */
+        }
+        .meteor {
+            position: absolute;
+            width: 4px; /* Updated to match bullet width */
+            height: 10px; /* Updated to match bullet height */
+            background: white; /* Changed to white color */
+            opacity: 0.7;
+            animation: meteorFall linear forwards;
+            border-radius: 2px; /* Optional: Slight rounding for better appearance */
+        }
+        /* Meteor Fall Animation */
+        @keyframes meteorFall {
+            from {
+                transform: translateY(0);
+                opacity: 0.7;
+            }
+            to {
+                transform: translateY(100vh); /* Move straight down to the bottom */
+                opacity: 0;
+            }
+        }
         /* Starfield Background */
         .starfield {
             position: absolute;
@@ -55,39 +87,6 @@
             }
             to {
                 transform: translateX(-50px) translateY(100px);
-            }
-        }
-        /* Meteor Shower Background */
-        .meteorShower {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background: transparent;
-            top: 0;
-            left: 0;
-            pointer-events: none;
-            overflow: hidden;
-            z-index: 0; /* Behind stars */
-        }
-        .meteor {
-            position: absolute;
-            width: 10px;
-            height: 30px;
-            background: rgba(255, 165, 0, 0.8); /* Orange color with opacity */
-            border-radius: 50%;
-            opacity: 0.7;
-            transform: rotate(45deg);
-            animation: meteorFall linear forwards;
-        }
-        /* Meteor Fall Animation */
-        @keyframes meteorFall {
-            from {
-                transform: translate(-50px, 0) rotate(45deg);
-                opacity: 0.7;
-            }
-            to {
-                transform: translate(50px, 100vh) rotate(90deg);
-                opacity: 0;
             }
         }
         /* Spaceship */
@@ -420,7 +419,7 @@
         let GAME_WIDTH = window.innerWidth;
         let GAME_HEIGHT = window.innerHeight;
         const STAR_COUNT = 300; // Increased number of stars for denser starfield
-        const ASTEROID_SPAWN_INTERVAL = 1600; // Reduced spawn interval to increase asteroid count by 25%
+        const ASTEROID_SPAWN_INTERVAL = 1600; // Reduced spawn interval by 20% to increase asteroid count by 25%
         const ASTEROID_SPEED_MIN = 2; // Increased speed for faster sensation
         const ASTEROID_SPEED_MAX = 5;
         const ASTEROID_SIZE_MIN = 30;
@@ -435,8 +434,9 @@
         const METEOR_SPAWN_INTERVAL = 1000; // Spawn a meteor every second
         const METEOR_SPEED_MIN = 5;
         const METEOR_SPEED_MAX = 10;
-        const METEOR_SIZE_MIN = 10;
-        const METEOR_SIZE_MAX = 20;
+        const METEOR_SIZE_MIN = 4; // Same as bullet width
+        const METEOR_SIZE_MAX = 4; // Same as bullet width
+        const METEOR_HEIGHT = 10; // Same as bullet height
 
         // Game Variables
         let score = 0;
@@ -520,11 +520,10 @@
         function spawnMeteor() {
             const meteor = document.createElement('div');
             meteor.classList.add('meteor');
-            const size = Math.random() * (METEOR_SIZE_MAX - METEOR_SIZE_MIN) + METEOR_SIZE_MIN;
-            meteor.style.width = `${size}px`;
-            meteor.style.height = `${size * 3}px`; // Taller than wide for meteor effect
+            meteor.style.width = `${METEOR_SIZE_MIN}px`; // Fixed width
+            meteor.style.height = `${METEOR_HEIGHT}px`; // Fixed height
             meteor.style.left = `${Math.random() * GAME_WIDTH}px`;
-            meteor.style.top = `-50px`; // Start above the viewport
+            meteor.style.top = `-10px`; // Start just above the viewport
             meteor.style.animationDuration = `${Math.random() * (METEOR_SPEED_MAX - METEOR_SPEED_MIN) + METEOR_SPEED_MIN}s`;
             meteorShower.appendChild(meteor);
             meteors.push(meteor);
@@ -1069,7 +1068,7 @@
             hyperspaceBar.style.width = '100%';
             hyperspaceButton.disabled = false;
 
-            // Remove existing asteroids, fragments, lasers, and explosions
+            // Remove existing asteroids, fragments, lasers, explosions, and meteors
             asteroids.forEach(ast => {
                 if (gameContainer.contains(ast.element)) {
                     gameContainer.removeChild(ast.element);
