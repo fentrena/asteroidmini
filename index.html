@@ -27,7 +27,7 @@
             height: 100%;
             background: black;
             overflow: hidden;
-            touch-action: none; /* Prevent default touch behaviors */
+            touch-action: manipulation; /* Prevent default touch behaviors like double-tap zoom */
         }
         /* Starfield Background */
         .starfield {
@@ -195,6 +195,7 @@
             z-index: 7;
             color: #fff;
             text-align: center;
+            user-select: none; /* Prevent text selection */
         }
         #startScreen h1 {
             font-size: 48px;
@@ -224,13 +225,13 @@
             margin: 5px 0;
         }
         .retro-arrow {
-            width: 40px;
-            height: 40px;
+            width: 50px;
+            height: 50px;
             background: white; /* Filled with white for visibility */
             border: 2px solid #fff;
             cursor: pointer;
             transition: background 0.2s;
-            margin: 0 10px;
+            margin: 0 15px;
         }
         /* Different clip-paths for different directions */
         /* Up Arrow */
@@ -299,6 +300,9 @@
             box-shadow: 0 0 10px rgba(255,0,0,0.5);
             font-size: 24px;
             color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         #shootButton:active {
             background: rgba(255,0,0,0.9);
@@ -1021,4 +1025,170 @@
             // Chance of malfunction
             if (Math.random() < HYPERSPACE_CHANCE) {
                 // Spawn an asteroid directly on the spaceship
-                const size = Math.random() * (ASTEROID_SIZE_MAX - ASTEROID_SIZE_MIN) + AST
+                const size = Math.random() * (ASTEROID_SIZE_MAX - ASTEROID_SIZE_MIN) + ASTEROID_SIZE_MIN;
+                const asteroid = document.createElement('div');
+                asteroid.classList.add('asteroid');
+                asteroid.style.width = `${size}px`;
+                asteroid.style.height = `${size}px`;
+                asteroid.style.left = `${ship.x}px`;
+                asteroid.style.top = `${ship.y}px`;
+                asteroid.style.transform = `rotate(${Math.random() * 360}deg)`;
+                asteroid.style.background = `hsl(${Math.random() * 360}, 50%, 50%)`;
+                asteroid.style.animationDuration = `${Math.random() * 5 + 5}s`;
+
+                gameContainer.appendChild(asteroid);
+                asteroids.push({
+                    element: asteroid,
+                    x: ship.x,
+                    y: ship.y,
+                    size: size,
+                    velocityX: (Math.random() < 0.5 ? 1 : -1) * (ASTEROID_SPEED_MIN + Math.random() * ASTEROID_SPEED_MAX),
+                    velocityY: (Math.random() < 0.5 ? 1 : -1) * (ASTEROID_SPEED_MIN + Math.random() * ASTEROID_SPEED_MAX),
+                    rotation: Math.random() * 360,
+                    rotationSpeed: (Math.random() - 0.5) * 2
+                });
+
+                // Create explosion due to malfunction
+                createExplosion(ship.x, ship.y, size);
+            }
+        }
+
+        // Create Flash Effect on Hyperspace
+        function createFlash(x, y) {
+            const flash = document.createElement('div');
+            flash.classList.add('explosion');
+            flash.style.width = '100px';
+            flash.style.height = '100px';
+            flash.style.left = `${x - 50}px`;
+            flash.style.top = `${y - 50}px`;
+            flash.style.background = 'radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%)';
+            gameContainer.appendChild(flash);
+            explosions.push({
+                element: flash,
+                x: x,
+                y: y,
+                size: 100,
+                opacity: 1
+            });
+
+            // Remove flash after animation
+            setTimeout(() => {
+                if (gameContainer.contains(flash)) {
+                    gameContainer.removeChild(flash);
+                }
+                explosions.shift();
+            }, 500);
+        }
+
+        // Handle Window Resize
+        window.addEventListener('resize', () => {
+            // Update game dimensions
+            GAME_WIDTH = window.innerWidth;
+            GAME_HEIGHT = window.innerHeight;
+            detectDeviceAndAdjustLayout();
+        });
+
+        // Touch Controls Implementation
+        // Handle Retro Arrow Controls
+        upArrow.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            touchControls.up = true;
+        });
+        upArrow.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            touchControls.up = false;
+        });
+        upArrow.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            touchControls.up = true;
+        });
+        upArrow.addEventListener('mouseup', (e) => {
+            e.preventDefault();
+            touchControls.up = false;
+        });
+        upArrow.addEventListener('mouseleave', (e) => {
+            e.preventDefault();
+            touchControls.up = false;
+        });
+
+        downArrow.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            touchControls.down = true;
+        });
+        downArrow.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            touchControls.down = false;
+        });
+        downArrow.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            touchControls.down = true;
+        });
+        downArrow.addEventListener('mouseup', (e) => {
+            e.preventDefault();
+            touchControls.down = false;
+        });
+        downArrow.addEventListener('mouseleave', (e) => {
+            e.preventDefault();
+            touchControls.down = false;
+        });
+
+        leftArrow.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            touchControls.left = true;
+        });
+        leftArrow.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            touchControls.left = false;
+        });
+        leftArrow.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            touchControls.left = true;
+        });
+        leftArrow.addEventListener('mouseup', (e) => {
+            e.preventDefault();
+            touchControls.left = false;
+        });
+        leftArrow.addEventListener('mouseleave', (e) => {
+            e.preventDefault();
+            touchControls.left = false;
+        });
+
+        rightArrow.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            touchControls.right = true;
+        });
+        rightArrow.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            touchControls.right = false;
+        });
+        rightArrow.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            touchControls.right = true;
+        });
+        rightArrow.addEventListener('mouseup', (e) => {
+            e.preventDefault();
+            touchControls.right = false;
+        });
+        rightArrow.addEventListener('mouseleave', (e) => {
+            e.preventDefault();
+            touchControls.right = false;
+        });
+
+        // Prevent scrolling on touch devices when touching control buttons
+        const controlButtons = [upArrow, downArrow, leftArrow, rightArrow, shootButton];
+        controlButtons.forEach(button => {
+            button.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
+        });
+
+        // Prevent double-tap zoom by disabling double-tap events
+        let lastTouchEnd = 0;
+        gameContainer.addEventListener('touchend', function(event) {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+    </script>
+</body>
+</html>
