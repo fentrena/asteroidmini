@@ -43,12 +43,12 @@
         }
         .meteor {
             position: absolute;
-            width: 4px; /* Updated to match bullet width */
-            height: 10px; /* Updated to match bullet height */
+            width: 2px; /* Thinner width: Reduced from 4px to 2px */
+            height: 10px; /* Height remains the same */
             background: white; /* Changed to white color */
             opacity: 0.7;
             animation: meteorFall linear forwards;
-            border-radius: 2px; /* Optional: Slight rounding for better appearance */
+            border-radius: 1px; /* Slight rounding for better appearance */
         }
         /* Meteor Fall Animation */
         @keyframes meteorFall {
@@ -431,12 +431,12 @@
         const HYPERSPACE_COOLDOWN = 15000; // in ms
 
         // Meteor Shower Constants
-        const METEOR_SPAWN_INTERVAL = 1000; // Spawn a meteor every second
+        const METEOR_SPAWN_INTERVAL = 1000; // Spawn a group of meteorites every second
         const METEOR_SPEED_MIN = 5;
         const METEOR_SPEED_MAX = 10;
-        const METEOR_SIZE_MIN = 4; // Same as bullet width
-        const METEOR_SIZE_MAX = 4; // Same as bullet width
+        const METEOR_WIDTH = 2; // Thinner width
         const METEOR_HEIGHT = 10; // Same as bullet height
+        const METEOR_COUNT_PER_SPAWN = 10; // Increase meteorite quantity by 10x
 
         // Game Variables
         let score = 0;
@@ -513,15 +513,22 @@
 
         // Initialize Meteor Shower
         function initMeteorShower() {
-            setInterval(spawnMeteor, METEOR_SPAWN_INTERVAL);
+            setInterval(spawnMeteorGroup, METEOR_SPAWN_INTERVAL);
         }
 
-        // Spawn Meteor
+        // Spawn a Group of Meteorites
+        function spawnMeteorGroup() {
+            for (let i = 0; i < METEOR_COUNT_PER_SPAWN; i++) {
+                spawnMeteor();
+            }
+        }
+
+        // Spawn Single Meteor
         function spawnMeteor() {
             const meteor = document.createElement('div');
             meteor.classList.add('meteor');
-            meteor.style.width = `${METEOR_SIZE_MIN}px`; // Fixed width
-            meteor.style.height = `${METEOR_HEIGHT}px`; // Fixed height
+            meteor.style.width = `${METEOR_WIDTH}px`; // Thinner width
+            meteor.style.height = `${METEOR_HEIGHT}px`; // Same as bullet height
             meteor.style.left = `${Math.random() * GAME_WIDTH}px`;
             meteor.style.top = `-10px`; // Start just above the viewport
             meteor.style.animationDuration = `${Math.random() * (METEOR_SPEED_MAX - METEOR_SPEED_MIN) + METEOR_SPEED_MIN}s`;
