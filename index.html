@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Asteroid Field Navigator</title>
     <style>
-        /* Reset and basic styling */
+        /* Reset and Basic Styling */
         * {
             margin: 0;
             padding: 0;
@@ -339,6 +339,7 @@
             spaceship.style.left = `${ship.x}px`;
             spaceship.style.top = `${ship.y}px`;
             // Start the game loop
+            lastFrameTime = Date.now();
             requestAnimationFrame(gameLoop);
         }
 
@@ -350,7 +351,7 @@
             lastFrameTime = now;
 
             update(delta);
-            render();
+            // Removed render() as it was undefined
 
             requestAnimationFrame(gameLoop);
         }
@@ -545,12 +546,11 @@
             spaceship.appendChild(laser);
             lasers.push({
                 element: laser,
-                x: ship.x,
-                y: ship.y,
+                x: ship.x + ship.width / 2 - 1, // Center of the ship
+                y: ship.y - ship.height / 2,
                 width: 2,
                 height: 20,
-                rotation: ship.rotation,
-                velocityY: -5
+                velocityY: -10 // Increased speed for better responsiveness
             });
 
             // Remove laser after animation
@@ -742,8 +742,16 @@
             hyperspaceButton.disabled = false;
 
             // Remove existing asteroids and fragments
-            asteroids.forEach(ast => gameContainer.removeChild(ast.element));
-            fragments.forEach(frag => gameContainer.removeChild(frag.element));
+            asteroids.forEach(ast => {
+                if (gameContainer.contains(ast.element)) {
+                    gameContainer.removeChild(ast.element);
+                }
+            });
+            fragments.forEach(frag => {
+                if (gameContainer.contains(frag.element)) {
+                    gameContainer.removeChild(frag.element);
+                }
+            });
             asteroids = [];
             fragments = [];
             lasers = [];
@@ -760,7 +768,6 @@
             gameOverScreen.style.display = 'none';
 
             // Restart game loop
-            gameOver = false;
             lastFrameTime = Date.now();
             requestAnimationFrame(gameLoop);
         }
