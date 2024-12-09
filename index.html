@@ -38,12 +38,23 @@
             top: -50%;
             left: -50%;
             pointer-events: none;
+            overflow: hidden;
         }
         .star {
             position: absolute;
             background: white;
             border-radius: 50%;
             opacity: 0.8;
+            animation: moveStar linear infinite;
+        }
+        /* Star Movement */
+        @keyframes moveStar {
+            from {
+                transform: translateX(0) translateY(0);
+            }
+            to {
+                transform: translateX(-50px) translateY(100px);
+            }
         }
         /* Spaceship */
         #spaceship {
@@ -99,7 +110,7 @@
             position: absolute;
             background: gray;
             border-radius: 50%;
-            opacity: 0.9;
+            opacity: 0.7; /* Reduced opacity for translucency */
             animation: rotateAsteroid linear infinite;
         }
         @keyframes rotateAsteroid {
@@ -367,10 +378,10 @@
         // Game Constants
         let GAME_WIDTH = window.innerWidth;
         let GAME_HEIGHT = window.innerHeight;
-        const STAR_COUNT = 150;
+        const STAR_COUNT = 300; // Increased number of stars for denser starfield
         const ASTEROID_SPAWN_INTERVAL = 2000; // Initial spawn interval in ms
-        const ASTEROID_SPEED_MIN = 1;
-        const ASTEROID_SPEED_MAX = 3;
+        const ASTEROID_SPEED_MIN = 2; // Increased speed for faster sensation
+        const ASTEROID_SPEED_MAX = 5;
         const ASTEROID_SIZE_MIN = 30;
         const ASTEROID_SIZE_MAX = 80;
         const FRAGMENT_SIZE_MIN = 10;
@@ -433,13 +444,15 @@
         function initStarfield() {
             for (let i = 0; i < STAR_COUNT; i++) {
                 const star = document.createElement('div');
-                const size = Math.random() * 3;
+                const size = Math.random() * 2; // Smaller stars for depth
                 star.style.width = `${size}px`;
                 star.style.height = `${size}px`;
                 star.style.background = 'white';
                 star.style.top = `${Math.random() * 100}%`;
                 star.style.left = `${Math.random() * 100}%`;
-                star.style.opacity = Math.random();
+                star.style.opacity = Math.random() * 0.8 + 0.2; // Varying opacity for depth
+                star.style.animationDuration = `${Math.random() * 5 + 5}s`; // Different speeds
+                star.style.animationDelay = `${Math.random() * 5}s`; // Staggered start
                 starfield.appendChild(star);
                 stars.push({
                     element: star,
@@ -619,14 +632,18 @@
             spaceship.style.top = `${ship.y}px`;
         }
 
-        // Update Stars for Parallax Effect
+        // Update Stars for Star Shower Effect
         function updateStars(delta) {
             stars.forEach(star => {
-                const speed = star.speed;
-                let top = parseFloat(star.element.style.top);
-                top += speed;
-                if (top > 100) top = 0;
-                star.element.style.top = `${top}%`;
+                // Move stars diagonally to simulate forward motion
+                let currentLeft = parseFloat(star.element.style.left);
+                let currentTop = parseFloat(star.element.style.top);
+                currentLeft -= star.speed;
+                currentTop += star.speed;
+                if (currentLeft < -5) currentLeft = 105; // Reset position when out of view
+                if (currentTop > 105) currentTop = -5;
+                star.element.style.left = `${currentLeft}%`;
+                star.element.style.top = `${currentTop}%`;
             });
         }
 
@@ -673,7 +690,10 @@
             asteroid.style.left = `${x}px`;
             asteroid.style.top = `${y}px`;
             asteroid.style.transform = `rotate(${Math.random() * 360}deg)`;
-            asteroid.style.background = `hsl(${Math.random() * 360}, 50%, 50%)`;
+            // Assign varying shades of gray with translucency
+            const grayShade = Math.floor(Math.random() * 256);
+            const opacity = Math.random() * 0.5 + 0.3; // Opacity between 0.3 and 0.8
+            asteroid.style.background = `rgba(${grayShade}, ${grayShade}, ${grayShade}, ${opacity})`;
             asteroid.style.animationDuration = `${Math.random() * 5 + 5}s`; // Random rotation speed
 
             gameContainer.appendChild(asteroid);
@@ -803,7 +823,10 @@
             fragment.style.left = `${x}px`;
             fragment.style.top = `${y}px`;
             fragment.style.transform = `rotate(${rotation}deg)`;
-            fragment.style.background = `hsl(${Math.random() * 360}, 50%, 50%)`;
+            // Assign varying shades of gray with translucency
+            const grayShade = Math.floor(Math.random() * 256);
+            const opacity = Math.random() * 0.5 + 0.3; // Opacity between 0.3 and 0.8
+            fragment.style.background = `rgba(${grayShade}, ${grayShade}, ${grayShade}, ${opacity})`;
             fragment.style.animationDuration = `${Math.random() * 5 + 5}s`; // Random rotation speed
 
             gameContainer.appendChild(fragment);
@@ -1033,7 +1056,10 @@
                 asteroid.style.left = `${ship.x}px`;
                 asteroid.style.top = `${ship.y}px`;
                 asteroid.style.transform = `rotate(${Math.random() * 360}deg)`;
-                asteroid.style.background = `hsl(${Math.random() * 360}, 50%, 50%)`;
+                // Assign varying shades of gray with translucency
+                const grayShade = Math.floor(Math.random() * 256);
+                const opacity = Math.random() * 0.5 + 0.3; // Opacity between 0.3 and 0.8
+                asteroid.style.background = `rgba(${grayShade}, ${grayShade}, ${grayShade}, ${opacity})`;
                 asteroid.style.animationDuration = `${Math.random() * 5 + 5}s`;
 
                 gameContainer.appendChild(asteroid);
