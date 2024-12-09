@@ -74,6 +74,8 @@
             height: 100%;
             background: #0ff;
             clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+            border: 2px solid white; /* White outline for retro look */
+            box-sizing: border-box;
         }
         /* Propellant Flames */
         .flame {
@@ -112,7 +114,9 @@
             border-radius: 50%;
             opacity: 0.7; /* Reduced opacity for translucency */
             animation: rotateAsteroid linear infinite;
+            border: 1px solid white; /* White outline for retro look */
             /* Irregular shape will be applied via JavaScript using clip-path */
+            box-shadow: 0 0 5px rgba(255, 255, 255, 0.5); /* Subtle shadow for depth */
         }
         @keyframes rotateAsteroid {
             from { transform: rotate(0deg); }
@@ -911,21 +915,36 @@
 
         // Check Collisions
         function checkCollisions() {
-            // Collision detection is handled within updateLasers
-            // Additional collision checks can be implemented here if needed
+            asteroids.forEach((asteroid, index) => {
+                if (isColliding(asteroid.element, spaceship)) {
+                    loseLife();
+                    createExplosion(asteroid.x, asteroid.y, asteroid.size);
+                    // Remove asteroid upon collision
+                    gameContainer.removeChild(asteroid.element);
+                    asteroids.splice(index, 1);
+                }
+            });
         }
 
-        // Collision Detection (Bounding Box for simplicity)
+        // Collision Detection (Bounding Circle Method)
         function isColliding(a, b) {
             const aRect = a.getBoundingClientRect();
             const bRect = b.getBoundingClientRect();
 
-            return !(
-                aRect.top > bRect.bottom ||
-                aRect.bottom < bRect.top ||
-                aRect.left > bRect.right ||
-                aRect.right < bRect.left
-            );
+            // Calculate centers
+            const aCenterX = aRect.left + aRect.width / 2;
+            const aCenterY = aRect.top + aRect.height / 2;
+            const bCenterX = bRect.left + bRect.width / 2;
+            const bCenterY = bRect.top + bRect.height / 2;
+
+            // Calculate distance between centers
+            const distance = Math.hypot(aCenterX - bCenterX, aCenterY - bCenterY);
+
+            // Calculate sum of radii
+            const aRadius = aRect.width / 2;
+            const bRadius = bRect.width / 2;
+
+            return distance < (aRadius + bRadius);
         }
 
         // Lose Life
