@@ -147,6 +147,28 @@
             border-radius: 5px;
             font-size: 16px;
         }
+        /* Start Screen */
+        #startScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 5;
+            color: #fff;
+        }
+        #startScreen h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        #startScreen p {
+            font-size: 24px;
+        }
     </style>
 </head>
 <body>
@@ -156,7 +178,7 @@
         <!-- Spaceship -->
         <div id="spaceship">
             <div class="ship-body"></div>
-            <div class="flame" id="flame"></div>
+            <div class="flame" id="flame" style="display: none;"></div>
         </div>
         <!-- HUD -->
         <div id="hud">
@@ -165,7 +187,7 @@
             <div id="hyperspace">
                 <button id="hyperspaceButton">Hyperspace</button>
                 <div id="hyperspaceCooldown" style="width: 100px; height: 10px; background: #333; margin-top: 5px; position: relative;">
-                    <div id="hyperspaceBar" style="width: 0%; height: 100%; background: #0f0;"></div>
+                    <div id="hyperspaceBar" style="width: 100%; height: 100%; background: #0f0;"></div>
                 </div>
             </div>
         </div>
@@ -174,6 +196,11 @@
             <h1>Game Over</h1>
             <p id="finalScore">Your Score: 0</p>
             <button id="restartButton">Restart</button>
+        </div>
+        <!-- Start Screen -->
+        <div id="startScreen">
+            <h1>Asteroid Field Navigator</h1>
+            <p>Press Any Key or Tap to Start</p>
         </div>
     </div>
 
@@ -185,8 +212,8 @@
          *******************************************/
 
         // Game Constants
-        const GAME_WIDTH = window.innerWidth;
-        const GAME_HEIGHT = window.innerHeight;
+        let GAME_WIDTH = window.innerWidth;
+        let GAME_HEIGHT = window.innerHeight;
         const STAR_COUNT = 100;
         const ASTEROID_SPAWN_INTERVAL = 2000; // Initial spawn interval in ms
         const ASTEROID_SPEED_MIN = 1;
@@ -223,6 +250,7 @@
         const gameOverScreen = document.getElementById('gameOverScreen');
         const finalScore = document.getElementById('finalScore');
         const restartButton = document.getElementById('restartButton');
+        const startScreen = document.getElementById('startScreen');
 
         // Game Objects
         let asteroids = [];
@@ -284,9 +312,35 @@
         // Handle Restart Button
         restartButton.addEventListener('click', restartGame);
 
+        // Start Screen Event Listeners
+        function addStartListeners() {
+            window.addEventListener('keydown', startGame);
+            window.addEventListener('touchstart', startGame);
+        }
+
+        function removeStartListeners() {
+            window.removeEventListener('keydown', startGame);
+            window.removeEventListener('touchstart', startGame);
+        }
+
         // Initialize Game
         initStarfield();
-        requestAnimationFrame(gameLoop);
+        addStartListeners();
+
+        // Start Game Function
+        function startGame() {
+            // Remove start screen
+            startScreen.style.display = 'none';
+            // Remove start listeners to prevent multiple starts
+            removeStartListeners();
+            // Initialize spaceship position
+            ship.x = GAME_WIDTH / 2;
+            ship.y = GAME_HEIGHT / 2;
+            spaceship.style.left = `${ship.x}px`;
+            spaceship.style.top = `${ship.y}px`;
+            // Start the game loop
+            requestAnimationFrame(gameLoop);
+        }
 
         // Game Loop
         function gameLoop() {
@@ -329,18 +383,29 @@
         // Handle User Input
         function handleInput() {
             // Movement
+            let moving = false;
             if (keysPressed['arrowup'] || keysPressed['w']) {
                 ship.velocityY -= ship.acceleration;
-                flame.style.display = 'block';
+                moving = true;
             }
             if (keysPressed['arrowdown'] || keysPressed['s']) {
                 ship.velocityY += ship.acceleration;
+                moving = true;
             }
             if (keysPressed['arrowleft'] || keysPressed['a']) {
                 ship.velocityX -= ship.acceleration;
+                moving = true;
             }
             if (keysPressed['arrowright'] || keysPressed['d']) {
                 ship.velocityX += ship.acceleration;
+                moving = true;
+            }
+
+            // Show or hide flame based on movement
+            if (moving) {
+                flame.style.display = 'block';
+            } else {
+                flame.style.display = 'none';
             }
 
             // Apply friction
@@ -351,11 +416,11 @@
             ship.x += ship.velocityX;
             ship.y += ship.velocityY;
 
-            // Boundaries
-            if (ship.x < 0) ship.x = GAME_WIDTH;
-            if (ship.x > GAME_WIDTH) ship.x = 0;
-            if (ship.y < 0) ship.y = GAME_HEIGHT;
-            if (ship.y > GAME_HEIGHT) ship.y = 0;
+            // Boundaries (wrap around)
+            if (ship.x < -ship.width) ship.x = GAME_WIDTH + ship.width;
+            if (ship.x > GAME_WIDTH + ship.width) ship.x = -ship.width;
+            if (ship.y < -ship.height) ship.y = GAME_HEIGHT + ship.height;
+            if (ship.y > GAME_HEIGHT + ship.height) ship.y = -ship.height;
 
             // Update spaceship position
             spaceship.style.left = `${ship.x}px`;
@@ -371,7 +436,7 @@
             }
 
             // Hyperspace
-            if (keysPressed['h'] && hyperspaceAvailable) {
+            if ((keysPressed['h'] || keysPressed['hyperspace']) && hyperspaceAvailable) {
                 useHyperspace();
             }
         }
@@ -390,10 +455,37 @@
         // Spawn Asteroids
         function spawnAsteroid() {
             const size = Math.random() * (ASTEROID_SIZE_MAX - ASTEROID_SIZE_MIN) + ASTEROID_SIZE_MIN;
-            const x = Math.random() < 0.5 ? -size : GAME_WIDTH + size;
-            const y = Math.random() * GAME_HEIGHT;
+            const edge = Math.floor(Math.random() * 4);
+            let x, y, directionX, directionY;
+
+            switch(edge) {
+                case 0: // Top
+                    x = Math.random() * GAME_WIDTH;
+                    y = -size;
+                    directionX = (Math.random() - 0.5) * 2;
+                    directionY = 1;
+                    break;
+                case 1: // Right
+                    x = GAME_WIDTH + size;
+                    y = Math.random() * GAME_HEIGHT;
+                    directionX = -1;
+                    directionY = (Math.random() - 0.5) * 2;
+                    break;
+                case 2: // Bottom
+                    x = Math.random() * GAME_WIDTH;
+                    y = GAME_HEIGHT + size;
+                    directionX = (Math.random() - 0.5) * 2;
+                    directionY = -1;
+                    break;
+                case 3: // Left
+                    x = -size;
+                    y = Math.random() * GAME_HEIGHT;
+                    directionX = 1;
+                    directionY = (Math.random() - 0.5) * 2;
+                    break;
+            }
+
             const speed = Math.random() * (ASTEROID_SPEED_MAX - ASTEROID_SPEED_MIN) + ASTEROID_SPEED_MIN;
-            const direction = x < 0 ? 1 : -1;
             const rotation = Math.random() * 360;
             const rotationSpeed = (Math.random() - 0.5) * 2;
 
@@ -412,7 +504,8 @@
                 x: x,
                 y: y,
                 size: size,
-                speed: speed * direction,
+                velocityX: directionX * speed,
+                velocityY: directionY * speed,
                 rotation: rotation,
                 rotationSpeed: rotationSpeed
             });
@@ -427,13 +520,16 @@
             }
 
             asteroids.forEach((asteroid, index) => {
-                asteroid.x += asteroid.speed;
+                asteroid.x += asteroid.velocityX;
+                asteroid.y += asteroid.velocityY;
                 asteroid.rotation += asteroid.rotationSpeed;
                 asteroid.element.style.left = `${asteroid.x}px`;
+                asteroid.element.style.top = `${asteroid.y}px`;
                 asteroid.element.style.transform = `rotate(${asteroid.rotation}deg)`;
 
                 // Remove asteroids that are out of bounds
-                if (asteroid.x < -asteroid.size || asteroid.x > GAME_WIDTH + asteroid.size) {
+                if (asteroid.x < -asteroid.size * 2 || asteroid.x > GAME_WIDTH + asteroid.size * 2 ||
+                    asteroid.y < -asteroid.size * 2 || asteroid.y > GAME_HEIGHT + asteroid.size * 2) {
                     gameContainer.removeChild(asteroid.element);
                     asteroids.splice(index, 1);
                 }
@@ -453,7 +549,8 @@
                 y: ship.y,
                 width: 2,
                 height: 20,
-                rotation: ship.rotation
+                rotation: ship.rotation,
+                velocityY: -5
             });
 
             // Remove laser after animation
@@ -468,7 +565,9 @@
         // Update Lasers
         function updateLasers(delta) {
             lasers.forEach((laser, index) => {
-                // Laser movement is handled by CSS animation
+                laser.y += laser.velocityY;
+                laser.element.style.top = `${laser.y - ship.y}px`; // Relative to spaceship
+
                 // Collision detection with asteroids
                 asteroids.forEach((asteroid, aIndex) => {
                     if (isColliding(laser.element, asteroid.element)) {
@@ -480,6 +579,14 @@
                         lasers.splice(index, 1);
                     }
                 });
+
+                // Remove laser if it goes off-screen
+                if (laser.y < -100) {
+                    if (spaceship.contains(laser.element)) {
+                        spaceship.removeChild(laser.element);
+                    }
+                    lasers.splice(index, 1);
+                }
             });
         }
 
@@ -506,7 +613,9 @@
         // Create Fragment
         function createFragment(x, y, size) {
             const speed = Math.random() * (ASTEROID_SPEED_MAX - ASTEROID_SPEED_MIN) + ASTEROID_SPEED_MIN;
-            const direction = Math.random() * 360;
+            const angle = Math.random() * 360;
+            const velocityX = Math.cos(angle * (Math.PI / 180)) * speed;
+            const velocityY = Math.sin(angle * (Math.PI / 180)) * speed;
             const rotation = Math.random() * 360;
             const rotationSpeed = (Math.random() - 0.5) * 4;
 
@@ -525,8 +634,8 @@
                 x: x,
                 y: y,
                 size: size,
-                speed: speed,
-                direction: direction,
+                velocityX: velocityX,
+                velocityY: velocityY,
                 rotation: rotation,
                 rotationSpeed: rotationSpeed
             });
@@ -535,18 +644,16 @@
         // Update Fragments
         function updateFragments(delta) {
             fragments.forEach((fragment, index) => {
-                // Convert direction to radians
-                const rad = fragment.direction * (Math.PI / 180);
-                fragment.x += Math.cos(rad) * fragment.speed;
-                fragment.y += Math.sin(rad) * fragment.speed;
+                fragment.x += fragment.velocityX;
+                fragment.y += fragment.velocityY;
                 fragment.rotation += fragment.rotationSpeed;
                 fragment.element.style.left = `${fragment.x}px`;
                 fragment.element.style.top = `${fragment.y}px`;
                 fragment.element.style.transform = `rotate(${fragment.rotation}deg)`;
 
                 // Remove fragments that are out of bounds
-                if (fragment.x < -fragment.size || fragment.x > GAME_WIDTH + fragment.size ||
-                    fragment.y < -fragment.size || fragment.y > GAME_HEIGHT + fragment.size) {
+                if (fragment.x < -fragment.size * 2 || fragment.x > GAME_WIDTH + fragment.size * 2 ||
+                    fragment.y < -fragment.size * 2 || fragment.y > GAME_HEIGHT + fragment.size * 2) {
                     gameContainer.removeChild(fragment.element);
                     fragments.splice(index, 1);
                 }
@@ -653,6 +760,8 @@
             gameOverScreen.style.display = 'none';
 
             // Restart game loop
+            gameOver = false;
+            lastFrameTime = Date.now();
             requestAnimationFrame(gameLoop);
         }
 
@@ -701,7 +810,8 @@
                     x: ship.x,
                     y: ship.y,
                     size: size,
-                    speed: (Math.random() < 0.5 ? 1 : -1) * (ASTEROID_SPEED_MIN + Math.random() * ASTEROID_SPEED_MAX),
+                    velocityX: (Math.random() < 0.5 ? 1 : -1) * (ASTEROID_SPEED_MIN + Math.random() * ASTEROID_SPEED_MAX),
+                    velocityY: (Math.random() < 0.5 ? 1 : -1) * (ASTEROID_SPEED_MIN + Math.random() * ASTEROID_SPEED_MAX),
                     rotation: Math.random() * 360,
                     rotationSpeed: (Math.random() - 0.5) * 2
                 });
