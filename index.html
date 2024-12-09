@@ -112,6 +112,7 @@
             border-radius: 50%;
             opacity: 0.7; /* Reduced opacity for translucency */
             animation: rotateAsteroid linear infinite;
+            /* Irregular shape will be applied via JavaScript using clip-path */
         }
         @keyframes rotateAsteroid {
             from { transform: rotate(0deg); }
@@ -384,7 +385,7 @@
         const ASTEROID_SPEED_MAX = 5;
         const ASTEROID_SIZE_MIN = 30;
         const ASTEROID_SIZE_MAX = 80;
-        const FRAGMENT_SIZE_MIN = 10;
+        const FRAGMENT_SIZE_MIN = 15; // Minimum size to allow fragmentation
         const FRAGMENT_SIZE_MAX = 30;
         const MAX_LIVES = 3;
         const SHOOT_COOLDOWN = 300; // in ms
@@ -647,6 +648,19 @@
             });
         }
 
+        // Generate a Random Irregular Clip-Path for Asteroids
+        function getRandomClipPath() {
+            const numPoints = Math.floor(Math.random() * 4) + 5; // 5 to 8 points
+            let points = '';
+            for (let i = 0; i < numPoints; i++) {
+                const x = Math.random() * 100;
+                const y = Math.random() * 100;
+                points += `${x}% ${y}%, `;
+            }
+            points = points.slice(0, -2);
+            return `polygon(${points})`;
+        }
+
         // Spawn Asteroids
         function spawnAsteroid() {
             const size = Math.random() * (ASTEROID_SIZE_MAX - ASTEROID_SIZE_MIN) + ASTEROID_SIZE_MIN;
@@ -694,6 +708,7 @@
             const grayShade = Math.floor(Math.random() * 256);
             const opacity = Math.random() * 0.5 + 0.3; // Opacity between 0.3 and 0.8
             asteroid.style.background = `rgba(${grayShade}, ${grayShade}, ${grayShade}, ${opacity})`;
+            asteroid.style.clipPath = getRandomClipPath(); // Assign irregular shape
             asteroid.style.animationDuration = `${Math.random() * 5 + 5}s`; // Random rotation speed
 
             gameContainer.appendChild(asteroid);
@@ -799,8 +814,8 @@
             asteroids.splice(index, 1);
 
             // Create fragments if asteroid is large enough
-            if (asteroid.size > FRAGMENT_SIZE_MAX) {
-                const fragmentCount = 2 + Math.floor(Math.random() * 3);
+            if (asteroid.size > FRAGMENT_SIZE_MIN) {
+                const fragmentCount = 2 + Math.floor(Math.random() * 3); // 2 to 4 fragments
                 for (let i = 0; i < fragmentCount; i++) {
                     createFragment(asteroid.x, asteroid.y, asteroid.size / 2);
                 }
@@ -809,6 +824,9 @@
 
         // Create Fragment
         function createFragment(x, y, size) {
+            // Ensure fragments don't go below the minimum size to prevent infinite fragmentation
+            if (size < FRAGMENT_SIZE_MIN) return;
+
             const speed = Math.random() * (ASTEROID_SPEED_MAX - ASTEROID_SPEED_MIN) + ASTEROID_SPEED_MIN;
             const angle = Math.random() * 360;
             const velocityX = Math.cos(angle * (Math.PI / 180)) * speed;
@@ -827,6 +845,7 @@
             const grayShade = Math.floor(Math.random() * 256);
             const opacity = Math.random() * 0.5 + 0.3; // Opacity between 0.3 and 0.8
             fragment.style.background = `rgba(${grayShade}, ${grayShade}, ${grayShade}, ${opacity})`;
+            fragment.style.clipPath = getRandomClipPath(); // Assign irregular shape
             fragment.style.animationDuration = `${Math.random() * 5 + 5}s`; // Random rotation speed
 
             gameContainer.appendChild(fragment);
@@ -840,33 +859,24 @@
                 rotation: rotation,
                 rotationSpeed: rotationSpeed
             });
+
+            // Add fragment to asteroids array to allow further shooting
+            asteroids.push({
+                element: fragment,
+                x: x,
+                y: y,
+                size: size,
+                velocityX: velocityX,
+                velocityY: velocityY,
+                rotation: rotation,
+                rotationSpeed: rotationSpeed
+            });
         }
 
         // Update Fragments
         function updateFragments(delta) {
-            fragments.forEach((fragment, index) => {
-                fragment.x += fragment.velocityX;
-                fragment.y += fragment.velocityY;
-                fragment.rotation += fragment.rotationSpeed;
-                fragment.element.style.left = `${fragment.x}px`;
-                fragment.element.style.top = `${fragment.y}px`;
-                fragment.element.style.transform = `rotate(${fragment.rotation}deg)`;
-
-                // Remove fragments that are out of bounds
-                if (fragment.x < -fragment.size * 2 || fragment.x > GAME_WIDTH + fragment.size * 2 ||
-                    fragment.y < -fragment.size * 2 || fragment.y > GAME_HEIGHT + fragment.size * 2) {
-                    gameContainer.removeChild(fragment.element);
-                    fragments.splice(index, 1);
-                }
-
-                // Collision with spaceship
-                if (isColliding(fragment.element, spaceship)) {
-                    loseLife();
-                    createExplosion(fragment.x, fragment.y, fragment.size);
-                    gameContainer.removeChild(fragment.element);
-                    fragments.splice(index, 1);
-                }
-            });
+            // No separate logic needed as fragments are now part of the asteroids array
+            // This function can be removed or kept empty for future enhancements
         }
 
         // Create Explosion Effect
@@ -901,15 +911,8 @@
 
         // Check Collisions
         function checkCollisions() {
-            asteroids.forEach((asteroid, index) => {
-                if (isColliding(asteroid.element, spaceship)) {
-                    loseLife();
-                    createExplosion(asteroid.x, asteroid.y, asteroid.size);
-                    // Remove asteroid upon collision
-                    gameContainer.removeChild(asteroid.element);
-                    asteroids.splice(index, 1);
-                }
-            });
+            // Collision detection is handled within updateLasers
+            // Additional collision checks can be implemented here if needed
         }
 
         // Collision Detection (Bounding Box for simplicity)
@@ -1060,6 +1063,7 @@
                 const grayShade = Math.floor(Math.random() * 256);
                 const opacity = Math.random() * 0.5 + 0.3; // Opacity between 0.3 and 0.8
                 asteroid.style.background = `rgba(${grayShade}, ${grayShade}, ${grayShade}, ${opacity})`;
+                asteroid.style.clipPath = getRandomClipPath(); // Assign irregular shape
                 asteroid.style.animationDuration = `${Math.random() * 5 + 5}s`;
 
                 gameContainer.appendChild(asteroid);
