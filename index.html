@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>Asteroid Field Navigator</title>
+    <!-- Prevent double-tap zoom on mobile -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
         /* Reset and Basic Styling */
         * {
@@ -10,25 +12,20 @@
             padding: 0;
             box-sizing: border-box;
         }
-        body {
+        html, body {
+            width: 100%;
+            height: 100%;
             overflow: hidden;
             background-color: #000;
             font-family: Arial, sans-serif;
             color: #fff;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
         }
         /* Game Container */
         #gameContainer {
             position: relative;
-            width: 80vw;
-            height: 80vh;
-            max-width: 800px;
-            max-height: 600px;
+            width: 100%;
+            height: 100%;
             background: black;
-            border: 2px solid #fff;
             overflow: hidden;
         }
         /* Starfield Background */
@@ -230,18 +227,58 @@
             height: 40px;
             background: rgba(255,255,255,0.1);
             border: 2px solid #fff;
+            /* Different clip-paths for different directions */
+            cursor: pointer;
+            transition: background 0.2s;
+            margin: 0 10px;
+        }
+        /* Up Arrow */
+        .retro-arrow.up {
             clip-path: polygon(
                 50% 0%, 
                 0% 50%, 
-                30% 50%, 
-                30% 100%, 
-                70% 100%, 
-                70% 50%, 
+                20% 50%, 
+                20% 100%, 
+                80% 100%, 
+                80% 50%, 
                 100% 50%
             );
-            margin: 0 10px;
-            cursor: pointer;
-            transition: background 0.2s;
+        }
+        /* Down Arrow */
+        .retro-arrow.down {
+            clip-path: polygon(
+                50% 100%, 
+                0% 50%, 
+                20% 50%, 
+                20% 0%, 
+                80% 0%, 
+                80% 50%, 
+                100% 50%
+            );
+        }
+        /* Left Arrow */
+        .retro-arrow.left {
+            clip-path: polygon(
+                0% 50%, 
+                50% 0%, 
+                50% 20%, 
+                100% 20%, 
+                100% 80%, 
+                50% 80%, 
+                50% 100%
+            );
+        }
+        /* Right Arrow */
+        .retro-arrow.right {
+            clip-path: polygon(
+                100% 50%, 
+                50% 0%, 
+                50% 20%, 
+                0% 20%, 
+                0% 80%, 
+                50% 80%, 
+                50% 100%
+            );
         }
         .retro-arrow:active {
             background: rgba(255,255,255,0.3);
@@ -301,14 +338,14 @@
         <!-- On-Screen Controls for Touch Devices -->
         <div class="controls" id="onScreenControls">
             <div class="control-row">
-                <div class="retro-arrow" id="upArrow"></div>
+                <div class="retro-arrow up" id="upArrow"></div>
             </div>
             <div class="control-row">
-                <div class="retro-arrow" id="leftArrow"></div>
-                <div class="retro-arrow" id="rightArrow"></div>
+                <div class="retro-arrow left" id="leftArrow"></div>
+                <div class="retro-arrow right" id="rightArrow"></div>
             </div>
             <div class="control-row">
-                <div class="retro-arrow" id="downArrow"></div>
+                <div class="retro-arrow down" id="downArrow"></div>
             </div>
         </div>
         <!-- Shoot Button -->
@@ -427,6 +464,12 @@
         // Handle Keyboard Input
         window.addEventListener('keydown', (e) => {
             keysPressed[e.key.toLowerCase()] = true;
+
+            // Enable spacebar for shooting
+            if (e.key === ' ' || e.key === 'Spacebar') { // 'Spacebar' for older browsers
+                e.preventDefault(); // Prevent default spacebar scrolling
+                shootLaser();
+            }
         });
         window.addEventListener('keyup', (e) => {
             keysPressed[e.key.toLowerCase()] = false;
@@ -465,15 +508,15 @@
                 // Show retro arrow controls
                 onScreenControls.style.display = 'flex';
                 // Adjust game container size if necessary
-                gameContainer.style.width = '90vw';
-                gameContainer.style.height = '70vh';
+                gameContainer.style.width = '100%';
+                gameContainer.style.height = '100%';
             } else {
                 onScreenControls.classList.remove('active');
                 // Hide retro arrow controls
                 onScreenControls.style.display = 'none';
                 // Adjust game container size if necessary
-                gameContainer.style.width = '800px';
-                gameContainer.style.height = '600px';
+                gameContainer.style.width = '100%';
+                gameContainer.style.height = '100%';
             }
         }
 
@@ -532,7 +575,7 @@
 
         // Handle User Input
         function handleInput() {
-            // Movement via Keyboard
+            // Movement via Keyboard and Touch Controls
             let moving = false;
             if (keysPressed['arrowup'] || keysPressed['w'] || touchControls.up) {
                 ship.velocityY -= ship.acceleration;
@@ -575,15 +618,6 @@
             // Update spaceship position
             spaceship.style.left = `${ship.x}px`;
             spaceship.style.top = `${ship.y}px`;
-
-            // Rotate spaceship based on movement direction (optional)
-            // Example: rotate towards movement direction
-            /*
-            if (ship.velocityX !== 0 || ship.velocityY !== 0) {
-                const angle = Math.atan2(ship.velocityY, ship.velocityX) * (180 / Math.PI) + 90;
-                spaceship.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
-            }
-            */
         }
 
         // Update Stars for Parallax Effect
