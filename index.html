@@ -49,6 +49,7 @@
             left: 50%;
             transform: translate(-50%, -50%) rotate(0deg);
             z-index: 2;
+            transition: transform 0.1s linear;
         }
         /* Spaceship Shape */
         .ship-body {
@@ -69,6 +70,7 @@
             border-radius: 50%;
             transform: translateX(-50%);
             animation: flame 0.5s infinite alternate;
+            opacity: 0.8;
         }
         @keyframes flame {
             from { height: 10px; opacity: 0.8; }
@@ -84,6 +86,7 @@
             left: 50%;
             transform: translateX(-50%);
             animation: laser 0.3s forwards;
+            opacity: 0.8;
         }
         @keyframes laser {
             from { height: 20px; opacity: 1; }
@@ -95,6 +98,25 @@
             background: gray;
             border-radius: 50%;
             opacity: 0.9;
+            animation: rotateAsteroid linear infinite;
+        }
+        @keyframes rotateAsteroid {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        /* Explosion */
+        .explosion {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: radial-gradient(circle, rgba(255,165,0,1) 0%, rgba(255,0,0,0.5) 60%, rgba(0,0,0,0) 80%);
+            border-radius: 50%;
+            animation: explode 0.5s forwards;
+            pointer-events: none;
+        }
+        @keyframes explode {
+            from { transform: scale(1); opacity: 1; }
+            to { transform: scale(3); opacity: 0; }
         }
         /* HUD */
         #hud {
@@ -115,6 +137,7 @@
             cursor: pointer;
             border-radius: 5px;
             opacity: 0.8;
+            font-size: 14px;
         }
         #hyperspaceButton:disabled {
             background: #555;
@@ -137,6 +160,12 @@
         }
         #gameOverScreen h1 {
             margin-bottom: 20px;
+            font-size: 48px;
+            text-shadow: 2px 2px 4px #000;
+        }
+        #gameOverScreen p {
+            font-size: 24px;
+            margin-bottom: 20px;
         }
         #restartButton {
             padding: 10px 20px;
@@ -146,6 +175,7 @@
             cursor: pointer;
             border-radius: 5px;
             font-size: 16px;
+            box-shadow: 2px 2px 4px #000;
         }
         /* Start Screen */
         #startScreen {
@@ -154,20 +184,86 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.9);
+            background: rgba(0,0,0,0.95);
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             z-index: 5;
             color: #fff;
+            text-align: center;
         }
         #startScreen h1 {
             font-size: 48px;
             margin-bottom: 20px;
+            text-shadow: 2px 2px 4px #000;
         }
         #startScreen p {
             font-size: 24px;
+            max-width: 80%;
+        }
+        /* On-Screen Controls for Touch Devices */
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 3;
+            display: flex;
+            gap: 20px;
+        }
+        .control-button {
+            width: 60px;
+            height: 60px;
+            background: rgba(255,255,255,0.1);
+            border: 2px solid #fff;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+        .control-button:active {
+            background: rgba(255,255,255,0.3);
+        }
+        /* Shoot Button */
+        #shootButton {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background: rgba(255,0,0,0.7);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 3;
+            box-shadow: 0 0 10px rgba(255,0,0,0.5);
+        }
+        #shootButton:active {
+            background: rgba(255,0,0,0.9);
+        }
+        /* Movement Indicators */
+        .arrow {
+            width: 0; 
+            height: 0; 
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-bottom: 25px solid #fff;
+            transform: rotate(0deg);
+        }
+        .arrow.up {
+            transform: rotate(0deg);
+        }
+        .arrow.down {
+            transform: rotate(180deg);
+        }
+        .arrow.left {
+            transform: rotate(-90deg);
+        }
+        .arrow.right {
+            transform: rotate(90deg);
         }
     </style>
 </head>
@@ -202,19 +298,35 @@
             <h1>Asteroid Field Navigator</h1>
             <p>Press Any Key or Tap to Start</p>
         </div>
+        <!-- On-Screen Controls for Touch Devices -->
+        <div class="controls" id="movementControls">
+            <div class="control-button" id="upButton">
+                <div class="arrow up"></div>
+            </div>
+            <div class="control-button" id="leftButton">
+                <div class="arrow left"></div>
+            </div>
+            <div class="control-button" id="rightButton">
+                <div class="arrow right"></div>
+            </div>
+            <div class="control-button" id="downButton">
+                <div class="arrow down"></div>
+            </div>
+        </div>
+        <button id="shootButton">&#128640;</button> <!-- Rocket Emoji as Shoot Icon -->
     </div>
 
     <script>
         /*******************************************
          * Asteroid Field Navigator Game
          * Author: ChatGPT
-         * Description: Spaceship navigation game through asteroid field.
+         * Description: Enhanced spaceship navigation game through asteroid field with improved visuals and touch controls.
          *******************************************/
 
         // Game Constants
         let GAME_WIDTH = window.innerWidth;
         let GAME_HEIGHT = window.innerHeight;
-        const STAR_COUNT = 100;
+        const STAR_COUNT = 150;
         const ASTEROID_SPAWN_INTERVAL = 2000; // Initial spawn interval in ms
         const ASTEROID_SPEED_MIN = 1;
         const ASTEROID_SPEED_MAX = 3;
@@ -237,6 +349,12 @@
         let shootAvailable = true;
         let hyperspaceAvailable = true;
         let hyperspaceLastUsed = 0;
+        let touchControls = {
+            up: false,
+            down: false,
+            left: false,
+            right: false
+        };
 
         // DOM Elements
         const gameContainer = document.getElementById('gameContainer');
@@ -251,12 +369,22 @@
         const finalScore = document.getElementById('finalScore');
         const restartButton = document.getElementById('restartButton');
         const startScreen = document.getElementById('startScreen');
+        const shootButton = document.getElementById('shootButton');
+
+        // On-Screen Movement Buttons
+        const movementControls = {
+            up: document.getElementById('upButton'),
+            down: document.getElementById('downButton'),
+            left: document.getElementById('leftButton'),
+            right: document.getElementById('rightButton')
+        };
 
         // Game Objects
         let asteroids = [];
         let lasers = [];
         let stars = [];
         let fragments = [];
+        let explosions = [];
 
         // Hyperspace Variables
         const HYPERSPACE_CHANCE = 0.2; // 20% chance to malfunction
@@ -265,7 +393,7 @@
         function initStarfield() {
             for (let i = 0; i < STAR_COUNT; i++) {
                 const star = document.createElement('div');
-                const size = Math.random() * 2;
+                const size = Math.random() * 3;
                 star.style.width = `${size}px`;
                 star.style.height = `${size}px`;
                 star.style.background = 'white';
@@ -312,6 +440,9 @@
         // Handle Restart Button
         restartButton.addEventListener('click', restartGame);
 
+        // Handle Shoot Button
+        shootButton.addEventListener('click', shootLaser);
+
         // Start Screen Event Listeners
         function addStartListeners() {
             window.addEventListener('keydown', startGame);
@@ -351,8 +482,6 @@
             lastFrameTime = now;
 
             update(delta);
-            // Removed render() as it was undefined
-
             requestAnimationFrame(gameLoop);
         }
 
@@ -363,6 +492,7 @@
             updateAsteroids(delta);
             updateLasers(delta);
             updateFragments(delta);
+            updateExplosions(delta);
             checkCollisions();
             updateHUD();
             increaseDifficulty();
@@ -383,21 +513,21 @@
 
         // Handle User Input
         function handleInput() {
-            // Movement
+            // Movement via Keyboard
             let moving = false;
-            if (keysPressed['arrowup'] || keysPressed['w']) {
+            if (keysPressed['arrowup'] || keysPressed['w'] || touchControls.up) {
                 ship.velocityY -= ship.acceleration;
                 moving = true;
             }
-            if (keysPressed['arrowdown'] || keysPressed['s']) {
+            if (keysPressed['arrowdown'] || keysPressed['s'] || touchControls.down) {
                 ship.velocityY += ship.acceleration;
                 moving = true;
             }
-            if (keysPressed['arrowleft'] || keysPressed['a']) {
+            if (keysPressed['arrowleft'] || keysPressed['a'] || touchControls.left) {
                 ship.velocityX -= ship.acceleration;
                 moving = true;
             }
-            if (keysPressed['arrowright'] || keysPressed['d']) {
+            if (keysPressed['arrowright'] || keysPressed['d'] || touchControls.right) {
                 ship.velocityX += ship.acceleration;
                 moving = true;
             }
@@ -426,20 +556,6 @@
             // Update spaceship position
             spaceship.style.left = `${ship.x}px`;
             spaceship.style.top = `${ship.y}px`;
-
-            // Shooting
-            if ((keysPressed[' '] || keysPressed['shoot']) && shootAvailable) {
-                shootLaser();
-                shootAvailable = false;
-                setTimeout(() => {
-                    shootAvailable = true;
-                }, SHOOT_COOLDOWN);
-            }
-
-            // Hyperspace
-            if ((keysPressed['h'] || keysPressed['hyperspace']) && hyperspaceAvailable) {
-                useHyperspace();
-            }
         }
 
         // Update Stars for Parallax Effect
@@ -487,7 +603,6 @@
             }
 
             const speed = Math.random() * (ASTEROID_SPEED_MAX - ASTEROID_SPEED_MIN) + ASTEROID_SPEED_MIN;
-            const rotation = Math.random() * 360;
             const rotationSpeed = (Math.random() - 0.5) * 2;
 
             const asteroid = document.createElement('div');
@@ -496,8 +611,9 @@
             asteroid.style.height = `${size}px`;
             asteroid.style.left = `${x}px`;
             asteroid.style.top = `${y}px`;
-            asteroid.style.transform = `rotate(${rotation}deg)`;
+            asteroid.style.transform = `rotate(${Math.random() * 360}deg)`;
             asteroid.style.background = `hsl(${Math.random() * 360}, 50%, 50%)`;
+            asteroid.style.animationDuration = `${Math.random() * 5 + 5}s`; // Random rotation speed
 
             gameContainer.appendChild(asteroid);
             asteroids.push({
@@ -507,7 +623,7 @@
                 size: size,
                 velocityX: directionX * speed,
                 velocityY: directionY * speed,
-                rotation: rotation,
+                rotation: Math.random() * 360,
                 rotationSpeed: rotationSpeed
             });
         }
@@ -539,6 +655,12 @@
 
         // Shoot Laser
         function shootLaser() {
+            if (!shootAvailable) return;
+            shootAvailable = false;
+            setTimeout(() => {
+                shootAvailable = true;
+            }, SHOOT_COOLDOWN);
+
             const laser = document.createElement('div');
             laser.classList.add('laser');
             laser.style.left = '50%';
@@ -552,14 +674,6 @@
                 height: 20,
                 velocityY: -10 // Increased speed for better responsiveness
             });
-
-            // Remove laser after animation
-            setTimeout(() => {
-                if (spaceship.contains(laser)) {
-                    spaceship.removeChild(laser);
-                }
-                lasers.shift();
-            }, 300);
         }
 
         // Update Lasers
@@ -572,6 +686,8 @@
                 asteroids.forEach((asteroid, aIndex) => {
                     if (isColliding(laser.element, asteroid.element)) {
                         destroyAsteroid(aIndex);
+                        // Create explosion
+                        createExplosion(asteroid.x, asteroid.y, asteroid.size);
                         // Remove laser
                         if (spaceship.contains(laser.element)) {
                             spaceship.removeChild(laser.element);
@@ -627,6 +743,7 @@
             fragment.style.top = `${y}px`;
             fragment.style.transform = `rotate(${rotation}deg)`;
             fragment.style.background = `hsl(${Math.random() * 360}, 50%, 50%)`;
+            fragment.style.animationDuration = `${Math.random() * 5 + 5}s`; // Random rotation speed
 
             gameContainer.appendChild(fragment);
             fragments.push({
@@ -661,10 +778,41 @@
                 // Collision with spaceship
                 if (isColliding(fragment.element, spaceship)) {
                     loseLife();
+                    createExplosion(fragment.x, fragment.y, fragment.size);
                     gameContainer.removeChild(fragment.element);
                     fragments.splice(index, 1);
                 }
             });
+        }
+
+        // Create Explosion Effect
+        function createExplosion(x, y, size) {
+            const explosion = document.createElement('div');
+            explosion.classList.add('explosion');
+            explosion.style.left = `${x}px`;
+            explosion.style.top = `${y}px`;
+            gameContainer.appendChild(explosion);
+            explosions.push({
+                element: explosion,
+                x: x,
+                y: y,
+                size: size,
+                opacity: 1
+            });
+
+            // Remove explosion after animation
+            setTimeout(() => {
+                if (gameContainer.contains(explosion)) {
+                    gameContainer.removeChild(explosion);
+                }
+                explosions.shift();
+            }, 500);
+        }
+
+        // Update Explosions
+        function updateExplosions(delta) {
+            // Currently handled via CSS animations and removal via setTimeout
+            // This function is kept for potential future enhancements
         }
 
         // Check Collisions
@@ -672,6 +820,7 @@
             asteroids.forEach((asteroid, index) => {
                 if (isColliding(asteroid.element, spaceship)) {
                     loseLife();
+                    createExplosion(asteroid.x, asteroid.y, asteroid.size);
                     // Remove asteroid upon collision
                     gameContainer.removeChild(asteroid.element);
                     asteroids.splice(index, 1);
@@ -709,9 +858,9 @@
             let livesHTML = 'Lives: ';
             for (let i = 0; i < MAX_LIVES; i++) {
                 if (i < lives) {
-                    livesHTML += '&#10084;'; // Heart symbol
+                    livesHTML += '&#10084;'; // Filled Heart
                 } else {
-                    livesHTML += '&#10084;&#8205;&#128148;'; // Empty heart
+                    livesHTML += '&#10084;&#8205;&#128148;'; // Empty Heart
                 }
             }
             livesElement.innerHTML = livesHTML;
@@ -741,7 +890,7 @@
             hyperspaceBar.style.width = '100%';
             hyperspaceButton.disabled = false;
 
-            // Remove existing asteroids and fragments
+            // Remove existing asteroids, fragments, lasers, and explosions
             asteroids.forEach(ast => {
                 if (gameContainer.contains(ast.element)) {
                     gameContainer.removeChild(ast.element);
@@ -752,9 +901,20 @@
                     gameContainer.removeChild(frag.element);
                 }
             });
+            lasers.forEach(laser => {
+                if (spaceship.contains(laser.element)) {
+                    spaceship.removeChild(laser.element);
+                }
+            });
+            explosions.forEach(exp => {
+                if (gameContainer.contains(exp.element)) {
+                    gameContainer.removeChild(exp.element);
+                }
+            });
             asteroids = [];
             fragments = [];
             lasers = [];
+            explosions = [];
 
             // Reset spaceship position and velocity
             ship.x = GAME_WIDTH / 2;
@@ -777,7 +937,7 @@
             // Every 30 seconds, increase asteroid speed and spawn rate
             const difficultyInterval = 30000;
             if (Date.now() - lastAsteroidSpawn > difficultyInterval) {
-                asteroidInterval = Math.max(500, asteroidInterval - 200);
+                asteroidInterval = Math.max(800, asteroidInterval - 200);
                 lastAsteroidSpawn = Date.now();
             }
         }
@@ -798,6 +958,9 @@
             spaceship.style.left = `${ship.x}px`;
             spaceship.style.top = `${ship.y}px`;
 
+            // Create a brief flash effect
+            createFlash(newX, newY);
+
             // Chance of malfunction
             if (Math.random() < HYPERSPACE_CHANCE) {
                 // Spawn an asteroid directly on the spaceship
@@ -810,6 +973,7 @@
                 asteroid.style.top = `${ship.y}px`;
                 asteroid.style.transform = `rotate(${Math.random() * 360}deg)`;
                 asteroid.style.background = `hsl(${Math.random() * 360}, 50%, 50%)`;
+                asteroid.style.animationDuration = `${Math.random() * 5 + 5}s`;
 
                 gameContainer.appendChild(asteroid);
                 asteroids.push({
@@ -822,7 +986,37 @@
                     rotation: Math.random() * 360,
                     rotationSpeed: (Math.random() - 0.5) * 2
                 });
+
+                // Create explosion due to malfunction
+                createExplosion(ship.x, ship.y, size);
             }
+        }
+
+        // Create Flash Effect on Hyperspace
+        function createFlash(x, y) {
+            const flash = document.createElement('div');
+            flash.classList.add('explosion');
+            flash.style.width = '100px';
+            flash.style.height = '100px';
+            flash.style.left = `${x - 50}px`;
+            flash.style.top = `${y - 50}px`;
+            flash.style.background = 'radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%)';
+            gameContainer.appendChild(flash);
+            explosions.push({
+                element: flash,
+                x: x,
+                y: y,
+                size: 100,
+                opacity: 1
+            });
+
+            // Remove flash after animation
+            setTimeout(() => {
+                if (gameContainer.contains(flash)) {
+                    gameContainer.removeChild(flash);
+                }
+                explosions.shift();
+            }, 500);
         }
 
         // Handle Window Resize
@@ -831,6 +1025,54 @@
             GAME_WIDTH = window.innerWidth;
             GAME_HEIGHT = window.innerHeight;
         });
+
+        // Touch Controls Implementation
+        // Handle Movement Buttons
+        Object.keys(movementControls).forEach(direction => {
+            const button = movementControls[direction];
+            // Touch Start
+            button.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                touchControls[direction] = true;
+            });
+            // Touch End
+            button.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                touchControls[direction] = false;
+            });
+            // Mouse Events for Desktop Simulation (optional)
+            button.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                touchControls[direction] = true;
+            });
+            button.addEventListener('mouseup', (e) => {
+                e.preventDefault();
+                touchControls[direction] = false;
+            });
+            button.addEventListener('mouseleave', (e) => {
+                e.preventDefault();
+                touchControls[direction] = false;
+            });
+        });
+
+        // Prevent scrolling on touch devices when touching control buttons
+        movementControls.up.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
+        movementControls.down.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
+        movementControls.left.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
+        movementControls.right.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
+        shootButton.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
+
+        // Allow shooting via touch
+        shootButton.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            shootLaser();
+        });
+
+        // Prevent multiple touches
+        shootButton.addEventListener('touchend', (e) => {
+            e.preventDefault();
+        });
+
     </script>
 </body>
 </html>
