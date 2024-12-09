@@ -39,6 +39,7 @@
             left: -50%;
             pointer-events: none;
             overflow: hidden;
+            z-index: 1;
         }
         .star {
             position: absolute;
@@ -56,6 +57,39 @@
                 transform: translateX(-50px) translateY(100px);
             }
         }
+        /* Meteor Shower Background */
+        .meteorShower {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 0; /* Behind stars */
+        }
+        .meteor {
+            position: absolute;
+            width: 10px;
+            height: 30px;
+            background: rgba(255, 165, 0, 0.8); /* Orange color with opacity */
+            border-radius: 50%;
+            opacity: 0.7;
+            transform: rotate(45deg);
+            animation: meteorFall linear forwards;
+        }
+        /* Meteor Fall Animation */
+        @keyframes meteorFall {
+            from {
+                transform: translate(-50px, 0) rotate(45deg);
+                opacity: 0.7;
+            }
+            to {
+                transform: translate(50px, 100vh) rotate(90deg);
+                opacity: 0;
+            }
+        }
         /* Spaceship */
         #spaceship {
             position: absolute;
@@ -64,7 +98,7 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%) rotate(0deg);
-            z-index: 2;
+            z-index: 3;
             transition: transform 0.1s linear;
         }
         /* Spaceship Shape */
@@ -103,7 +137,7 @@
             top: 0;
             left: 50%;
             transform: translateX(-50%);
-            z-index: 3;
+            z-index: 4;
             pointer-events: none;
             border-radius: 2px;
         }
@@ -131,7 +165,7 @@
             border-radius: 50%;
             animation: explode 0.5s forwards;
             pointer-events: none;
-            z-index: 4;
+            z-index: 5;
         }
         @keyframes explode {
             from { transform: scale(1); opacity: 1; }
@@ -142,7 +176,7 @@
             position: absolute;
             top: 10px;
             left: 10px;
-            z-index: 5;
+            z-index: 6;
         }
         #score, #lives, #hyperspace {
             margin-bottom: 10px;
@@ -174,7 +208,7 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            z-index: 6;
+            z-index: 7;
             display: none;
         }
         #gameOverScreen h1 {
@@ -208,7 +242,7 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            z-index: 7;
+            z-index: 8;
             color: #fff;
             text-align: center;
             user-select: none; /* Prevent text selection */
@@ -233,7 +267,7 @@
             position: absolute;
             bottom: 20px;
             width: 100%;
-            z-index: 5;
+            z-index: 6;
         }
         .control-row {
             display: flex;
@@ -312,7 +346,7 @@
             border: none;
             border-radius: 50%;
             cursor: pointer;
-            z-index: 5;
+            z-index: 6;
             box-shadow: 0 0 10px rgba(255,0,0,0.5);
             font-size: 24px;
             color: #fff;
@@ -327,6 +361,8 @@
 </head>
 <body>
     <div id="gameContainer">
+        <!-- Meteor Shower Background -->
+        <div class="meteorShower" id="meteorShower"></div>
         <!-- Starfield Background -->
         <div class="starfield" id="starfield"></div>
         <!-- Spaceship -->
@@ -384,7 +420,7 @@
         let GAME_WIDTH = window.innerWidth;
         let GAME_HEIGHT = window.innerHeight;
         const STAR_COUNT = 300; // Increased number of stars for denser starfield
-        const ASTEROID_SPAWN_INTERVAL = 2000; // Initial spawn interval in ms
+        const ASTEROID_SPAWN_INTERVAL = 1600; // Reduced spawn interval to increase asteroid count by 25%
         const ASTEROID_SPEED_MIN = 2; // Increased speed for faster sensation
         const ASTEROID_SPEED_MAX = 5;
         const ASTEROID_SIZE_MIN = 30;
@@ -394,6 +430,13 @@
         const MAX_LIVES = 3;
         const SHOOT_COOLDOWN = 300; // in ms
         const HYPERSPACE_COOLDOWN = 15000; // in ms
+
+        // Meteor Shower Constants
+        const METEOR_SPAWN_INTERVAL = 1000; // Spawn a meteor every second
+        const METEOR_SPEED_MIN = 5;
+        const METEOR_SPEED_MAX = 10;
+        const METEOR_SIZE_MIN = 10;
+        const METEOR_SIZE_MAX = 20;
 
         // Game Variables
         let score = 0;
@@ -416,6 +459,7 @@
         // DOM Elements
         const gameContainer = document.getElementById('gameContainer');
         const starfield = document.getElementById('starfield');
+        const meteorShower = document.getElementById('meteorShower');
         const spaceship = document.getElementById('spaceship');
         const flame = document.getElementById('flame');
         const scoreElement = document.getElementById('score');
@@ -441,6 +485,7 @@
         let stars = [];
         let fragments = [];
         let explosions = [];
+        let meteors = [];
 
         // Hyperspace Variables
         const HYPERSPACE_CHANCE = 0.2; // 20% chance to malfunction
@@ -464,6 +509,33 @@
                     speed: Math.random() * 0.5 + 0.2
                 });
             }
+        }
+
+        // Initialize Meteor Shower
+        function initMeteorShower() {
+            setInterval(spawnMeteor, METEOR_SPAWN_INTERVAL);
+        }
+
+        // Spawn Meteor
+        function spawnMeteor() {
+            const meteor = document.createElement('div');
+            meteor.classList.add('meteor');
+            const size = Math.random() * (METEOR_SIZE_MAX - METEOR_SIZE_MIN) + METEOR_SIZE_MIN;
+            meteor.style.width = `${size}px`;
+            meteor.style.height = `${size * 3}px`; // Taller than wide for meteor effect
+            meteor.style.left = `${Math.random() * GAME_WIDTH}px`;
+            meteor.style.top = `-50px`; // Start above the viewport
+            meteor.style.animationDuration = `${Math.random() * (METEOR_SPEED_MAX - METEOR_SPEED_MIN) + METEOR_SPEED_MIN}s`;
+            meteorShower.appendChild(meteor);
+            meteors.push(meteor);
+
+            // Remove meteor after animation completes
+            meteor.addEventListener('animationend', () => {
+                if (gameContainer.contains(meteor)) {
+                    gameContainer.removeChild(meteor);
+                }
+                meteors = meteors.filter(m => m !== meteor);
+            });
         }
 
         // Spaceship Object
@@ -520,6 +592,7 @@
 
         // Initialize Game
         initStarfield();
+        initMeteorShower();
         addStartListeners();
         detectDeviceAndAdjustLayout();
 
@@ -1017,10 +1090,16 @@
                     gameContainer.removeChild(exp.element);
                 }
             });
+            meteors.forEach(meteor => {
+                if (gameContainer.contains(meteor)) {
+                    gameContainer.removeChild(meteor);
+                }
+            });
             asteroids = [];
             fragments = [];
             lasers = [];
             explosions = [];
+            meteors = [];
 
             // Reset spaceship position and velocity
             ship.x = GAME_WIDTH / 2;
