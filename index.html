@@ -79,18 +79,15 @@
         /* Laser Beam */
         .laser {
             position: absolute;
-            width: 2px;
-            height: 20px;
+            width: 4px;
+            height: 10px;
             background: red;
             top: 0;
             left: 50%;
             transform: translateX(-50%);
-            animation: laser 0.3s forwards;
-            opacity: 0.8;
-        }
-        @keyframes laser {
-            from { height: 20px; opacity: 1; }
-            to { height: 100px; opacity: 0; }
+            z-index: 3;
+            pointer-events: none;
+            border-radius: 2px;
         }
         /* Asteroid */
         .asteroid {
@@ -113,6 +110,7 @@
             border-radius: 50%;
             animation: explode 0.5s forwards;
             pointer-events: none;
+            z-index: 4;
         }
         @keyframes explode {
             from { transform: scale(1); opacity: 1; }
@@ -240,6 +238,8 @@
             cursor: pointer;
             z-index: 3;
             box-shadow: 0 0 10px rgba(255,0,0,0.5);
+            font-size: 24px;
+            color: #fff;
         }
         #shootButton:active {
             background: rgba(255,0,0,0.9);
@@ -335,7 +335,7 @@
         const FRAGMENT_SIZE_MIN = 10;
         const FRAGMENT_SIZE_MAX = 30;
         const MAX_LIVES = 3;
-        const SHOOT_COOLDOWN = 500; // in ms
+        const SHOOT_COOLDOWN = 300; // in ms
         const HYPERSPACE_COOLDOWN = 15000; // in ms
 
         // Game Variables
@@ -668,25 +668,28 @@
             spaceship.appendChild(laser);
             lasers.push({
                 element: laser,
-                x: ship.x + ship.width / 2 - 1, // Center of the ship
+                x: ship.x + ship.width / 2 - 2, // Center of the ship
                 y: ship.y - ship.height / 2,
-                width: 2,
-                height: 20,
-                velocityY: -10 // Increased speed for better responsiveness
+                width: 4,
+                height: 10,
+                velocityY: -15 // Increased speed for faster travel
             });
         }
 
         // Update Lasers
         function updateLasers(delta) {
             lasers.forEach((laser, index) => {
+                // Update laser position
                 laser.y += laser.velocityY;
                 laser.element.style.top = `${laser.y - ship.y}px`; // Relative to spaceship
+
+                // Move laser upwards in the DOM
+                // Optional: Implement smooth movement via CSS or JavaScript
 
                 // Collision detection with asteroids
                 asteroids.forEach((asteroid, aIndex) => {
                     if (isColliding(laser.element, asteroid.element)) {
                         destroyAsteroid(aIndex);
-                        // Create explosion
                         createExplosion(asteroid.x, asteroid.y, asteroid.size);
                         // Remove laser
                         if (spaceship.contains(laser.element)) {
@@ -697,7 +700,7 @@
                 });
 
                 // Remove laser if it goes off-screen
-                if (laser.y < -100) {
+                if (ship.y + laser.y < 0) {
                     if (spaceship.contains(laser.element)) {
                         spaceship.removeChild(laser.element);
                     }
@@ -1072,7 +1075,6 @@
         shootButton.addEventListener('touchend', (e) => {
             e.preventDefault();
         });
-
     </script>
 </body>
 </html>
