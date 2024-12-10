@@ -29,6 +29,14 @@
             overflow: hidden;
             touch-action: manipulation; /* Prevent default touch behaviors like double-tap zoom */
         }
+        /* Background Music */
+        #backgroundMusic {
+            display: none;
+        }
+        /* Sound Effects */
+        audio {
+            display: none;
+        }
         /* Meteor Shower Background */
         .meteorShower {
             position: absolute;
@@ -43,9 +51,9 @@
         }
         .meteor {
             position: absolute;
-            width: 2px; /* Thinner width: Reduced from 4px to 2px */
-            height: 10px; /* Height remains the same */
-            background: white; /* Changed to white color */
+            width: 2px; /* Thinner width */
+            height: 10px; /* Same as bullet height */
+            background: white; /* White color */
             opacity: 0.7;
             animation: meteorFall linear forwards;
             border-radius: 1px; /* Slight rounding for better appearance */
@@ -147,11 +155,24 @@
             border-radius: 50%; /* Ensures the asteroid is perfectly circular */
             opacity: 0.7; /* Reduced opacity for translucency */
             animation: rotateAsteroid linear infinite;
-            border: 2px solid white; /* Increased border thickness for better visibility */
-            /* Removed clip-path to make asteroids perfectly circular */
+            border: 2px solid white; /* White outline for better visibility */
             box-shadow: 0 0 5px rgba(255, 255, 255, 0.5); /* Subtle shadow for depth */
         }
         @keyframes rotateAsteroid {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        /* Boss Asteroid */
+        .boss-asteroid {
+            position: absolute;
+            background: darkgray;
+            border-radius: 50%;
+            opacity: 0.9;
+            animation: rotateAsteroidBoss linear infinite;
+            border: 3px solid white; /* Thicker white outline */
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
+        }
+        @keyframes rotateAsteroidBoss {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
         }
@@ -170,12 +191,34 @@
             from { transform: scale(1); opacity: 1; }
             to { transform: scale(3); opacity: 0; }
         }
+        /* Particle Explosion */
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: yellow;
+            border-radius: 50%;
+            animation: particleMove 1s forwards;
+            pointer-events: none;
+            z-index: 5;
+        }
+        @keyframes particleMove {
+            from {
+                transform: translate(0, 0);
+                opacity: 1;
+            }
+            to {
+                transform: translate(var(--dx), var(--dy));
+                opacity: 0;
+            }
+        }
         /* HUD */
         #hud {
             position: absolute;
             top: 10px;
             left: 10px;
             z-index: 6;
+            font-size: 18px;
         }
         #score, #lives, #hyperspace {
             margin-bottom: 10px;
@@ -194,6 +237,20 @@
         #hyperspaceButton:disabled {
             background: #555;
             cursor: not-allowed;
+        }
+        /* Hyperspace Cooldown Bar */
+        #hyperspaceCooldown {
+            width: 100px;
+            height: 10px;
+            background: #333;
+            margin-top: 5px;
+            position: relative;
+        }
+        #hyperspaceBar {
+            width: 100%;
+            height: 100%;
+            background: #0f0;
+            transition: width 0.2s linear;
         }
         /* Game Over Screen */
         #gameOverScreen {
@@ -356,10 +413,44 @@
         #shootButton:active {
             background: rgba(255,0,0,0.9);
         }
+        /* Power-Up Styles */
+        .powerup {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: gold;
+            border-radius: 50%;
+            animation: rotatePowerup linear infinite;
+            cursor: pointer;
+            z-index: 4;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.7);
+        }
+        @keyframes rotatePowerup {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
     <div id="gameContainer">
+        <!-- Background Music -->
+        <audio id="backgroundMusic" loop>
+            <source src="https://freesound.org/data/previews/320/320655_5260870-lq.mp3" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+        <!-- Sound Effects -->
+        <audio id="shootSound">
+            <source src="https://freesound.org/data/previews/320/320655_5260870-lq.mp3" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+        <audio id="explosionSound">
+            <source src="https://freesound.org/data/previews/240/240776_4262876-lq.mp3" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+        <audio id="powerupSound">
+            <source src="https://freesound.org/data/previews/331/331912_3248244-lq.mp3" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
         <!-- Meteor Shower Background -->
         <div class="meteorShower" id="meteorShower"></div>
         <!-- Starfield Background -->
@@ -372,11 +463,12 @@
         <!-- HUD -->
         <div id="hud">
             <div id="score">Score: 0</div>
+            <div id="highScore">High Score: 0</div>
             <div id="lives">Lives: &#10084;&#10084;&#10084;</div>
             <div id="hyperspace">
                 <button id="hyperspaceButton">Hyperspace</button>
-                <div id="hyperspaceCooldown" style="width: 100px; height: 10px; background: #333; margin-top: 5px; position: relative;">
-                    <div id="hyperspaceBar" style="width: 100%; height: 100%; background: #0f0;"></div>
+                <div id="hyperspaceCooldown">
+                    <div id="hyperspaceBar"></div>
                 </div>
             </div>
         </div>
@@ -384,6 +476,7 @@
         <div id="gameOverScreen">
             <h1>Game Over</h1>
             <p id="finalScore">Your Score: 0</p>
+            <p id="finalHighScore">High Score: 0</p>
             <button id="restartButton">Restart</button>
         </div>
         <!-- Start Screen -->
@@ -412,7 +505,7 @@
         /*******************************************
          * Asteroid Field Navigator Game
          * Author: ChatGPT
-         * Description: Enhanced spaceship navigation game with device detection, responsive layout, retro-style touch controls, and keyboard controls.
+         * Description: Enhanced spaceship navigation game with device detection, responsive layout, retro-style touch controls, keyboard controls, sound effects, power-ups, levels, and more.
          *******************************************/
 
         // Game Constants
@@ -429,6 +522,9 @@
         const MAX_LIVES = 3;
         const SHOOT_COOLDOWN = 300; // in ms
         const HYPERSPACE_COOLDOWN = 15000; // in ms
+        const POWERUP_SPAWN_INTERVAL = 20000; // Spawn a power-up every 20 seconds
+        const LEVEL_UP_INTERVAL = 30000; // Level up every 30 seconds
+        const BOSS_SPAWN_INTERVAL = 60000; // Spawn a boss every 60 seconds
 
         // Meteor Shower Constants
         const METEOR_SPAWN_INTERVAL = 1000; // Spawn a group of meteorites every second
@@ -440,6 +536,7 @@
 
         // Game Variables
         let score = 0;
+        let highScore = localStorage.getItem('highScore') || 0;
         let lives = MAX_LIVES;
         let gameOver = false;
         let lastAsteroidSpawn = Date.now();
@@ -455,6 +552,12 @@
             left: false,
             right: false
         };
+        let lastPowerupSpawn = Date.now();
+        let powerups = [];
+        let currentLevel = 1;
+        let lastLevelUp = Date.now();
+        let lastBossSpawn = Date.now();
+        let bossActive = false;
 
         // DOM Elements
         const gameContainer = document.getElementById('gameContainer');
@@ -463,11 +566,13 @@
         const spaceship = document.getElementById('spaceship');
         const flame = document.getElementById('flame');
         const scoreElement = document.getElementById('score');
+        const highScoreElement = document.getElementById('highScore');
         const livesElement = document.getElementById('lives');
         const hyperspaceButton = document.getElementById('hyperspaceButton');
         const hyperspaceBar = document.getElementById('hyperspaceBar');
         const gameOverScreen = document.getElementById('gameOverScreen');
         const finalScore = document.getElementById('finalScore');
+        const finalHighScore = document.getElementById('finalHighScore');
         const restartButton = document.getElementById('restartButton');
         const startScreen = document.getElementById('startScreen');
         const shootButton = document.getElementById('shootButton');
@@ -479,6 +584,19 @@
         const leftArrow = document.getElementById('leftArrow');
         const rightArrow = document.getElementById('rightArrow');
 
+        // Power-Up Types
+        const POWERUP_TYPES = {
+            SHIELD: 'shield',
+            RAPID_FIRE: 'rapid_fire',
+            SPEED_BOOST: 'speed_boost'
+        };
+
+        // Sound Elements
+        const backgroundMusic = document.getElementById('backgroundMusic');
+        const shootSound = document.getElementById('shootSound');
+        const explosionSound = document.getElementById('explosionSound');
+        const powerupSound = document.getElementById('powerupSound');
+
         // Game Objects
         let asteroids = [];
         let lasers = [];
@@ -486,6 +604,10 @@
         let fragments = [];
         let explosions = [];
         let meteors = [];
+        let activePowerups = {};
+
+        // Boss Asteroid Object
+        let bossAsteroid = null;
 
         // Hyperspace Variables
         const HYPERSPACE_CHANCE = 0.2; // 20% chance to malfunction
@@ -544,6 +666,103 @@
             });
         }
 
+        // Initialize Power-Up Spawn
+        function initPowerupSpawn() {
+            setInterval(spawnPowerup, POWERUP_SPAWN_INTERVAL);
+        }
+
+        // Spawn Power-Up
+        function spawnPowerup() {
+            const powerup = document.createElement('div');
+            powerup.classList.add('powerup');
+            powerup.style.left = `${Math.random() * GAME_WIDTH}px`;
+            powerup.style.top = `${Math.random() * GAME_HEIGHT}px`;
+            powerup.dataset.type = getRandomPowerupType();
+            gameContainer.appendChild(powerup);
+            powerups.push(powerup);
+
+            // Remove powerup after 10 seconds if not collected
+            setTimeout(() => {
+                if (gameContainer.contains(powerup)) {
+                    gameContainer.removeChild(powerup);
+                }
+                powerups = powerups.filter(p => p !== powerup);
+            }, 10000);
+        }
+
+        // Get Random Power-Up Type
+        function getRandomPowerupType() {
+            const types = Object.values(POWERUP_TYPES);
+            return types[Math.floor(Math.random() * types.length)];
+        }
+
+        // Initialize Boss Spawn
+        function initBossSpawn() {
+            setInterval(spawnBossAsteroid, BOSS_SPAWN_INTERVAL);
+        }
+
+        // Spawn Boss Asteroid
+        function spawnBossAsteroid() {
+            if (bossActive) return; // Only one boss at a time
+
+            const size = 100;
+            const edge = Math.floor(Math.random() * 4);
+            let x, y, directionX, directionY;
+
+            switch(edge) {
+                case 0: // Top
+                    x = Math.random() * (GAME_WIDTH - size);
+                    y = -size;
+                    directionX = 0;
+                    directionY = 1;
+                    break;
+                case 1: // Right
+                    x = GAME_WIDTH + size;
+                    y = Math.random() * (GAME_HEIGHT - size);
+                    directionX = -0.5;
+                    directionY = 0;
+                    break;
+                case 2: // Bottom
+                    x = Math.random() * (GAME_WIDTH - size);
+                    y = GAME_HEIGHT + size;
+                    directionX = 0;
+                    directionY = -1;
+                    break;
+                case 3: // Left
+                    x = -size;
+                    y = Math.random() * (GAME_HEIGHT - size);
+                    directionX = 0.5;
+                    directionY = 0;
+                    break;
+            }
+
+            const speed = 1.5; // Slower speed for boss
+            const rotationSpeed = 1;
+
+            const boss = document.createElement('div');
+            boss.classList.add('boss-asteroid');
+            boss.style.width = `${size}px`;
+            boss.style.height = `${size}px`;
+            boss.style.left = `${x}px`;
+            boss.style.top = `${y}px`;
+            boss.style.transform = `rotate(${Math.random() * 360}deg)`;
+
+            gameContainer.appendChild(boss);
+            bossAsteroid = {
+                element: boss,
+                x: x,
+                y: y,
+                size: size,
+                velocityX: directionX * speed,
+                velocityY: directionY * speed,
+                rotation: Math.random() * 360,
+                rotationSpeed: rotationSpeed,
+                health: 20 // Boss health
+            };
+            asteroids.push(bossAsteroid);
+            bossActive = true;
+        }
+
         // Spaceship Object
         const ship = {
             x: GAME_WIDTH / 2,
@@ -599,6 +818,8 @@
         // Initialize Game
         initStarfield();
         initMeteorShower();
+        initPowerupSpawn();
+        initBossSpawn();
         addStartListeners();
         detectDeviceAndAdjustLayout();
 
@@ -627,6 +848,8 @@
             ship.y = GAME_HEIGHT / 2;
             spaceship.style.left = `${ship.x}px`;
             spaceship.style.top = `${ship.y}px`;
+            // Start background music
+            backgroundMusic.play();
             // Start the game loop
             lastFrameTime = Date.now();
             requestAnimationFrame(gameLoop);
@@ -652,6 +875,7 @@
             updateFragments(delta);
             updateExplosions(delta);
             checkCollisions();
+            checkPowerupCollisions();
             updateHUD();
             increaseDifficulty();
 
@@ -731,19 +955,6 @@
             });
         }
 
-        // Generate a Random Irregular Clip-Path for Asteroids (Removed for Rounder Shape)
-        // function getRandomClipPath() {
-        //     const numPoints = Math.floor(Math.random() * 4) + 5; // 5 to 8 points
-        //     let points = '';
-        //     for (let i = 0; i < numPoints; i++) {
-        //         const x = Math.random() * 100;
-        //         const y = Math.random() * 100;
-        //         points += `${x}% ${y}%, `;
-        //     }
-        //     points = points.slice(0, -2);
-        //     return `polygon(${points})`;
-        // }
-
         // Spawn Asteroids
         function spawnAsteroid() {
             const size = Math.random() * (ASTEROID_SIZE_MAX - ASTEROID_SIZE_MIN) + ASTEROID_SIZE_MIN;
@@ -752,26 +963,26 @@
 
             switch(edge) {
                 case 0: // Top
-                    x = Math.random() * GAME_WIDTH;
+                    x = Math.random() * (GAME_WIDTH - size);
                     y = -size;
                     directionX = (Math.random() - 0.5) * 2;
                     directionY = 1;
                     break;
                 case 1: // Right
                     x = GAME_WIDTH + size;
-                    y = Math.random() * GAME_HEIGHT;
+                    y = Math.random() * (GAME_HEIGHT - size);
                     directionX = -1;
                     directionY = (Math.random() - 0.5) * 2;
                     break;
                 case 2: // Bottom
-                    x = Math.random() * GAME_WIDTH;
+                    x = Math.random() * (GAME_WIDTH - size);
                     y = GAME_HEIGHT + size;
                     directionX = (Math.random() - 0.5) * 2;
                     directionY = -1;
                     break;
                 case 3: // Left
                     x = -size;
-                    y = Math.random() * GAME_HEIGHT;
+                    y = Math.random() * (GAME_HEIGHT - size);
                     directionX = 1;
                     directionY = (Math.random() - 0.5) * 2;
                     break;
@@ -791,8 +1002,6 @@
             const grayShade = Math.floor(Math.random() * 256);
             const opacity = Math.random() * 0.5 + 0.3; // Opacity between 0.3 and 0.8
             asteroid.style.background = `rgba(${grayShade}, ${grayShade}, ${grayShade}, ${opacity})`;
-            // Removed clip-path to make asteroids perfectly circular
-            // asteroid.style.clipPath = getRandomClipPath(); // Assign irregular shape
             asteroid.style.animationDuration = `${Math.random() * 5 + 5}s`; // Random rotation speed
 
             gameContainer.appendChild(asteroid);
@@ -804,7 +1013,8 @@
                 velocityX: directionX * speed,
                 velocityY: directionY * speed,
                 rotation: Math.random() * 360,
-                rotationSpeed: rotationSpeed
+                rotationSpeed: rotationSpeed,
+                health: 1 // Normal asteroid health
             });
         }
 
@@ -854,6 +1064,10 @@
                 height: 10,
                 velocityY: -15 // Increased speed for faster travel
             });
+
+            // Play shoot sound
+            shootSound.currentTime = 0;
+            shootSound.play();
         }
 
         // Update Lasers
@@ -866,8 +1080,24 @@
                 // Collision detection with asteroids
                 asteroids.forEach((asteroid, aIndex) => {
                     if (isColliding(laser.element, asteroid.element)) {
-                        destroyAsteroid(aIndex);
-                        createExplosion(asteroid.x, asteroid.y, asteroid.size);
+                        // If it's a boss asteroid, decrement health
+                        if (asteroid.classList.contains('boss-asteroid')) {
+                            asteroid.health -= 1;
+                            if (asteroid.health <= 0) {
+                                destroyAsteroid(aIndex);
+                                createExplosion(asteroid.x, asteroid.y, asteroid.size);
+                                spawnParticles(asteroid.x + asteroid.size / 2, asteroid.y + asteroid.size / 2);
+                            }
+                        } else {
+                            destroyAsteroid(aIndex);
+                            createExplosion(asteroid.x, asteroid.y, asteroid.size);
+                            spawnParticles(asteroid.x + asteroid.size / 2, asteroid.y + asteroid.size / 2);
+                            // Increment score for destroying asteroid
+                            score += 10;
+                            // Play explosion sound
+                            explosionSound.currentTime = 0;
+                            explosionSound.play();
+                        }
                         // Remove laser
                         if (spaceship.contains(laser.element)) {
                             spaceship.removeChild(laser.element);
@@ -893,15 +1123,22 @@
             score += Math.floor(100 / asteroid.size * 50);
             scoreElement.textContent = `Score: ${score}`;
 
+            // Update high score
+            if (score > highScore) {
+                highScore = score;
+                highScoreElement.textContent = `High Score: ${highScore}`;
+                localStorage.setItem('highScore', highScore);
+            }
+
             // Remove asteroid from DOM and array
             gameContainer.removeChild(asteroid.element);
             asteroids.splice(index, 1);
 
-            // Create fragments if asteroid is large enough
-            if (asteroid.size > FRAGMENT_SIZE_MIN) {
+            // Create fragments if asteroid is large enough and not a boss
+            if (asteroid.size > FRAGMENT_SIZE_MIN && !asteroid.classList.contains('boss-asteroid')) {
                 const fragmentCount = 2 + Math.floor(Math.random() * 3); // 2 to 4 fragments
                 for (let i = 0; i < fragmentCount; i++) {
-                    createFragment(asteroid.x, asteroid.y, asteroid.size / 2);
+                    createFragment(asteroid.x + asteroid.size / 2, asteroid.y + asteroid.size / 2, asteroid.size / 2);
                 }
             }
         }
@@ -929,8 +1166,6 @@
             const grayShade = Math.floor(Math.random() * 256);
             const opacity = Math.random() * 0.5 + 0.3; // Opacity between 0.3 and 0.8
             fragment.style.background = `rgba(${grayShade}, ${grayShade}, ${grayShade}, ${opacity})`;
-            // Removed clip-path to make fragments perfectly circular
-            // fragment.style.clipPath = getRandomClipPath(); // Assign irregular shape
             fragment.style.animationDuration = `${Math.random() * 5 + 5}s`; // Random rotation speed
 
             gameContainer.appendChild(fragment);
@@ -954,7 +1189,8 @@
                 velocityX: velocityX,
                 velocityY: velocityY,
                 rotation: rotation,
-                rotationSpeed: rotationSpeed
+                rotationSpeed: rotationSpeed,
+                health: 1 // Fragment health
             });
         }
 
@@ -988,22 +1224,721 @@
             }, 500);
         }
 
-        // Update Explosions
-        function updateExplosions(delta) {
-            // Currently handled via CSS animations and removal via setTimeout
-            // This function is kept for potential future enhancements
+        // Spawn Particle Explosion
+        function spawnParticles(x, y) {
+            for (let i = 0; i < 20; i++) { // Number of particles
+                const particle = document.createElement('div');
+                particle.classList.add('particle');
+                particle.style.left = `${x}px`;
+                particle.style.top = `${y}px`;
+                // Random direction
+                const angle = Math.random() * 360;
+                const distance = Math.random() * 50;
+                const dx = Math.cos(angle * (Math.PI / 180)) * distance;
+                const dy = Math.sin(angle * (Math.PI / 180)) * distance;
+                particle.style.setProperty('--dx', `${dx}px`);
+                particle.style.setProperty('--dy', `${dy}px`);
+                gameContainer.appendChild(particle);
+                // Remove particle after animation
+                particle.addEventListener('animationend', () => {
+                    if (gameContainer.contains(particle)) {
+                        gameContainer.removeChild(particle);
+                    }
+                });
+            }
         }
 
-        // Check Collisions
-        function checkCollisions() {
+        // Check Collisions with Power-Ups
+        function checkPowerupCollisions() {
+            powerups.forEach((powerup, index) => {
+                if (isColliding(powerup, spaceship)) {
+                    const type = powerup.dataset.type;
+                    applyPowerup(type);
+                    // Play power-up sound
+                    powerupSound.currentTime = 0;
+                    powerupSound.play();
+                    // Remove powerup from DOM and array
+                    gameContainer.removeChild(powerup);
+                    powerups.splice(index, 1);
+                }
+            });
+        }
+
+        // Apply Power-Up Effect
+        function applyPowerup(type) {
+            switch(type) {
+                case POWERUP_TYPES.SHIELD:
+                    activateShield();
+                    break;
+                case POWERUP_TYPES.RAPID_FIRE:
+                    activateRapidFire();
+                    break;
+                case POWERUP_TYPES.SPEED_BOOST:
+                    activateSpeedBoost();
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        // Activate Shield
+        function activateShield() {
+            if (activePowerups['shield']) return; // Prevent multiple shields
+            activePowerups['shield'] = true;
+            // Add shield effect (e.g., a glowing circle around the spaceship)
+            const shield = document.createElement('div');
+            shield.classList.add('explosion'); // Reusing explosion style for simplicity
+            shield.style.width = '60px';
+            shield.style.height = '60px';
+            shield.style.left = `${ship.x - 10}px`;
+            shield.style.top = `${ship.y - 10}px`;
+            shield.style.background = 'rgba(0, 255, 255, 0.3)';
+            shield.style.border = '2px solid #0ff';
+            shield.style.animation = 'shieldPulse 2s infinite';
+            gameContainer.appendChild(shield);
+            activePowerups['shieldElement'] = shield;
+
+            // Shield pulse animation
+            const styleSheet = document.styleSheets[0];
+            styleSheet.insertRule(`
+                @keyframes shieldPulse {
+                    0% { transform: scale(1); opacity: 0.5; }
+                    50% { transform: scale(1.5); opacity: 0.3; }
+                    100% { transform: scale(1); opacity: 0.5; }
+                }
+            `, styleSheet.cssRules.length);
+
+            // Duration of shield effect
+            setTimeout(() => {
+                // Remove shield effect
+                if (gameContainer.contains(shield)) {
+                    gameContainer.removeChild(shield);
+                }
+                delete activePowerups['shield'];
+                delete activePowerups['shieldElement'];
+            }, 10000); // 10 seconds
+        }
+
+        // Activate Rapid Fire
+        function activateRapidFire() {
+            if (activePowerups['rapid_fire']) return; // Prevent multiple rapid fires
+            activePowerups['rapid_fire'] = true;
+            const originalCooldown = SHOOT_COOLDOWN;
+            const rapidCooldown = 100; // Faster shoot cooldown
+
+            // Modify shootLaser function temporarily
+            const originalShootLaser = shootLaser;
+            shootLaser = function() {
+                if (!shootAvailable) return;
+                shootAvailable = false;
+                setTimeout(() => {
+                    shootAvailable = true;
+                }, rapidCooldown);
+
+                const laser = document.createElement('div');
+                laser.classList.add('laser');
+                laser.style.left = '50%';
+                laser.style.top = '0';
+                spaceship.appendChild(laser);
+                lasers.push({
+                    element: laser,
+                    x: ship.x + ship.width / 2 - 2, // Center of the ship
+                    y: ship.y - ship.height / 2,
+                    width: 4,
+                    height: 10,
+                    velocityY: -15 // Increased speed for faster travel
+                });
+
+                // Play shoot sound
+                shootSound.currentTime = 0;
+                shootSound.play();
+            };
+
+            // Duration of rapid fire effect
+            setTimeout(() => {
+                // Restore original shootLaser function
+                shootLaser = originalShootLaser;
+                delete activePowerups['rapid_fire'];
+            }, 10000); // 10 seconds
+        }
+
+        // Activate Speed Boost
+        function activateSpeedBoost() {
+            if (activePowerups['speed_boost']) return; // Prevent multiple speed boosts
+            activePowerups['speed_boost'] = true;
+            const originalAcceleration = ship.acceleration;
+            ship.acceleration = 0.4; // Increased acceleration
+            ship.friction = 0.02; // Reduced friction for smoother movement
+
+            // Duration of speed boost effect
+            setTimeout(() => {
+                ship.acceleration = originalAcceleration;
+                ship.friction = 0.05;
+                delete activePowerups['speed_boost'];
+            }, 10000); // 10 seconds
+        }
+
+        // Spawn Boss Asteroid
+        function spawnBossAsteroid() {
+            if (bossActive) return; // Only one boss at a time
+
+            const size = 100;
+            const edge = Math.floor(Math.random() * 4);
+            let x, y, directionX, directionY;
+
+            switch(edge) {
+                case 0: // Top
+                    x = Math.random() * (GAME_WIDTH - size);
+                    y = -size;
+                    directionX = 0;
+                    directionY = 1;
+                    break;
+                case 1: // Right
+                    x = GAME_WIDTH + size;
+                    y = Math.random() * (GAME_HEIGHT - size);
+                    directionX = -0.5;
+                    directionY = 0;
+                    break;
+                case 2: // Bottom
+                    x = Math.random() * (GAME_WIDTH - size);
+                    y = GAME_HEIGHT + size;
+                    directionX = 0;
+                    directionY = -1;
+                    break;
+                case 3: // Left
+                    x = -size;
+                    y = Math.random() * (GAME_HEIGHT - size);
+                    directionX = 0.5;
+                    directionY = 0;
+                    break;
+            }
+
+            const speed = 1.5; // Slower speed for boss
+            const rotationSpeed = 1;
+
+            const boss = document.createElement('div');
+            boss.classList.add('boss-asteroid');
+            boss.style.width = `${size}px`;
+            boss.style.height = `${size}px`;
+            boss.style.left = `${x}px`;
+            boss.style.top = `${y}px`;
+            boss.style.transform = `rotate(${Math.random() * 360}deg)`;
+
+            gameContainer.appendChild(boss);
+            bossAsteroid = {
+                element: boss,
+                x: x,
+                y: y,
+                size: size,
+                velocityX: directionX * speed,
+                velocityY: directionY * speed,
+                rotation: Math.random() * 360,
+                rotationSpeed: rotationSpeed,
+                health: 20 // Boss health
+            };
+            asteroids.push(bossAsteroid);
+            bossActive = true;
+        }
+
+        // Update Asteroids
+        function updateAsteroids(delta) {
+            // Spawn new asteroids based on interval
+            if (Date.now() - lastAsteroidSpawn > asteroidInterval) {
+                spawnAsteroid();
+                lastAsteroidSpawn = Date.now();
+            }
+
             asteroids.forEach((asteroid, index) => {
-                if (isColliding(asteroid.element, spaceship)) {
-                    loseLife();
-                    createExplosion(asteroid.x, asteroid.y, asteroid.size);
-                    // Remove asteroid upon collision
+                asteroid.x += asteroid.velocityX;
+                asteroid.y += asteroid.velocityY;
+                asteroid.rotation += asteroid.rotationSpeed;
+                asteroid.element.style.left = `${asteroid.x}px`;
+                asteroid.element.style.top = `${asteroid.y}px`;
+                asteroid.element.style.transform = `rotate(${asteroid.rotation}deg)`;
+
+                // If it's a boss asteroid, maybe have it shoot lasers or have special behavior
+                if (asteroid.classList.contains('boss-asteroid')) {
+                    // Example: Boss shoots a laser every few seconds
+                    if (!asteroid.lastBossShot) asteroid.lastBossShot = Date.now();
+                    if (Date.now() - asteroid.lastBossShot > 2000) { // Every 2 seconds
+                        shootBossLaser(asteroid);
+                        asteroid.lastBossShot = Date.now();
+                    }
+                }
+
+                // Remove asteroids that are out of bounds
+                if (asteroid.x < -asteroid.size * 2 || asteroid.x > GAME_WIDTH + asteroid.size * 2 ||
+                    asteroid.y < -asteroid.size * 2 || asteroid.y > GAME_HEIGHT + asteroid.size * 2) {
                     gameContainer.removeChild(asteroid.element);
                     asteroids.splice(index, 1);
+                    if (asteroid === bossAsteroid) {
+                        bossActive = false;
+                        bossAsteroid = null;
+                    }
                 }
+            });
+        }
+
+        // Shoot Boss Laser
+        function shootBossLaser(boss) {
+            const laser = document.createElement('div');
+            laser.classList.add('laser');
+            laser.style.width = '6px'; // Thicker laser for boss
+            laser.style.height = '20px'; // Longer laser
+            laser.style.background = 'rgba(255, 0, 0, 0.8)'; // Semi-transparent red
+            laser.style.borderRadius = '3px';
+            laser.style.left = '50%';
+            laser.style.top = '0';
+            spaceship.appendChild(laser);
+            lasers.push({
+                element: laser,
+                x: boss.x + boss.size / 2 - 3, // Center of the boss
+                y: boss.y + boss.size,
+                width: 6,
+                height: 20,
+                velocityY: 10 // Laser moves downward
+            });
+        }
+
+        // Update Lasers (including boss lasers)
+        function updateLasers(delta) {
+            lasers.forEach((laser, index) => {
+                // Update laser position
+                laser.y += laser.velocityY;
+                laser.element.style.top = `${laser.y - ship.y}px`; // Relative to spaceship
+
+                // Collision detection with asteroids
+                asteroids.forEach((asteroid, aIndex) => {
+                    if (isColliding(laser.element, asteroid.element)) {
+                        if (asteroid.classList.contains('boss-asteroid')) {
+                            asteroid.health -= 1;
+                            if (asteroid.health <= 0) {
+                                destroyAsteroid(aIndex);
+                                createExplosion(asteroid.x, asteroid.y, asteroid.size);
+                                spawnParticles(asteroid.x + asteroid.size / 2, asteroid.y + asteroid.size / 2);
+                            }
+                        } else {
+                            destroyAsteroid(aIndex);
+                            createExplosion(asteroid.x, asteroid.y, asteroid.size);
+                            spawnParticles(asteroid.x + asteroid.size / 2, asteroid.y + asteroid.size / 2);
+                            // Increment score for destroying asteroid
+                            score += 10;
+                            // Play explosion sound
+                            explosionSound.currentTime = 0;
+                            explosionSound.play();
+                        }
+                        // Remove laser
+                        if (spaceship.contains(laser.element)) {
+                            spaceship.removeChild(laser.element);
+                        }
+                        lasers.splice(index, 1);
+                    }
+                });
+
+                // Remove laser if it goes off-screen
+                if (ship.y + laser.y < 0 || ship.y + laser.y > GAME_HEIGHT) {
+                    if (gameContainer.contains(laser.element)) {
+                        gameContainer.removeChild(laser.element);
+                    }
+                    lasers.splice(index, 1);
+                }
+            });
+        }
+
+        // Destroy Asteroid and Create Fragments
+        function destroyAsteroid(index) {
+            const asteroid = asteroids[index];
+            // Increase score based on size
+            score += Math.floor(100 / asteroid.size * 50);
+            scoreElement.textContent = `Score: ${score}`;
+
+            // Update high score
+            if (score > highScore) {
+                highScore = score;
+                highScoreElement.textContent = `High Score: ${highScore}`;
+                localStorage.setItem('highScore', highScore);
+            }
+
+            // Remove asteroid from DOM and array
+            gameContainer.removeChild(asteroid.element);
+            asteroids.splice(index, 1);
+
+            // Create fragments if asteroid is large enough and not a boss
+            if (asteroid.size > FRAGMENT_SIZE_MIN && !asteroid.classList.contains('boss-asteroid')) {
+                const fragmentCount = 2 + Math.floor(Math.random() * 3); // 2 to 4 fragments
+                for (let i = 0; i < fragmentCount; i++) {
+                    createFragment(asteroid.x + asteroid.size / 2, asteroid.y + asteroid.size / 2, asteroid.size / 2);
+                }
+            }
+
+            // Check if boss is destroyed
+            if (asteroid.classList.contains('boss-asteroid')) {
+                // Award bonus score for defeating boss
+                score += 100;
+                highScoreElement.textContent = `High Score: ${highScore}`;
+                finalHighScore.textContent = `High Score: ${highScore}`;
+                // Play special explosion sound
+                explosionSound.currentTime = 0;
+                explosionSound.play();
+            }
+        }
+
+        // Create Fragment
+        function createFragment(x, y, size) {
+            // Ensure fragments don't go below the minimum size to prevent infinite fragmentation
+            if (size < FRAGMENT_SIZE_MIN) return;
+
+            const speed = Math.random() * (ASTEROID_SPEED_MAX - ASTEROID_SPEED_MIN) + ASTEROID_SPEED_MIN;
+            const angle = Math.random() * 360;
+            const velocityX = Math.cos(angle * (Math.PI / 180)) * speed;
+            const velocityY = Math.sin(angle * (Math.PI / 180)) * speed;
+            const rotation = Math.random() * 360;
+            const rotationSpeed = (Math.random() - 0.5) * 4;
+
+            const fragment = document.createElement('div');
+            fragment.classList.add('asteroid');
+            fragment.style.width = `${size}px`;
+            fragment.style.height = `${size}px`;
+            fragment.style.left = `${x}px`;
+            fragment.style.top = `${y}px`;
+            fragment.style.transform = `rotate(${rotation}deg)`;
+            // Assign varying shades of gray with translucency
+            const grayShade = Math.floor(Math.random() * 256);
+            const opacity = Math.random() * 0.5 + 0.3; // Opacity between 0.3 and 0.8
+            fragment.style.background = `rgba(${grayShade}, ${grayShade}, ${grayShade}, ${opacity})`;
+            fragment.style.animationDuration = `${Math.random() * 5 + 5}s`; // Random rotation speed
+
+            gameContainer.appendChild(fragment);
+            fragments.push({
+                element: fragment,
+                x: x,
+                y: y,
+                size: size,
+                velocityX: velocityX,
+                velocityY: velocityY,
+                rotation: rotation,
+                rotationSpeed: rotationSpeed
+            });
+
+            // Add fragment to asteroids array to allow further shooting
+            asteroids.push({
+                element: fragment,
+                x: x,
+                y: y,
+                size: size,
+                velocityX: velocityX,
+                velocityY: velocityY,
+                rotation: rotation,
+                rotationSpeed: rotationSpeed,
+                health: 1 // Fragment health
+            });
+        }
+
+        // Update Fragments
+        function updateFragments(delta) {
+            // No separate logic needed as fragments are now part of the asteroids array
+            // This function can be removed or kept empty for future enhancements
+        }
+
+        // Create Explosion Effect
+        function createExplosion(x, y, size) {
+            const explosion = document.createElement('div');
+            explosion.classList.add('explosion');
+            explosion.style.left = `${x}px`;
+            explosion.style.top = `${y}px`;
+            gameContainer.appendChild(explosion);
+            explosions.push({
+                element: explosion,
+                x: x,
+                y: y,
+                size: size,
+                opacity: 1
+            });
+
+            // Remove explosion after animation
+            setTimeout(() => {
+                if (gameContainer.contains(explosion)) {
+                    gameContainer.removeChild(explosion);
+                }
+                explosions.shift();
+            }, 500);
+        }
+
+        // Spawn Particle Explosion
+        function spawnParticles(x, y) {
+            for (let i = 0; i < 20; i++) { // Number of particles
+                const particle = document.createElement('div');
+                particle.classList.add('particle');
+                particle.style.left = `${x}px`;
+                particle.style.top = `${y}px`;
+                // Random direction
+                const angle = Math.random() * 360;
+                const distance = Math.random() * 50;
+                const dx = Math.cos(angle * (Math.PI / 180)) * distance;
+                const dy = Math.sin(angle * (Math.PI / 180)) * distance;
+                particle.style.setProperty('--dx', `${dx}px`);
+                particle.style.setProperty('--dy', `${dy}px`);
+                gameContainer.appendChild(particle);
+                // Remove particle after animation
+                particle.addEventListener('animationend', () => {
+                    if (gameContainer.contains(particle)) {
+                        gameContainer.removeChild(particle);
+                    }
+                });
+            }
+        }
+
+        // Check Collisions with Power-Ups
+        function checkPowerupCollisions() {
+            powerups.forEach((powerup, index) => {
+                if (isColliding(powerup, spaceship)) {
+                    const type = powerup.dataset.type;
+                    applyPowerup(type);
+                    // Play power-up sound
+                    powerupSound.currentTime = 0;
+                    powerupSound.play();
+                    // Remove powerup from DOM and array
+                    gameContainer.removeChild(powerup);
+                    powerups.splice(index, 1);
+                }
+            });
+        }
+
+        // Apply Power-Up Effect
+        function applyPowerup(type) {
+            switch(type) {
+                case POWERUP_TYPES.SHIELD:
+                    activateShield();
+                    break;
+                case POWERUP_TYPES.RAPID_FIRE:
+                    activateRapidFire();
+                    break;
+                case POWERUP_TYPES.SPEED_BOOST:
+                    activateSpeedBoost();
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        // Activate Shield
+        function activateShield() {
+            if (activePowerups['shield']) return; // Prevent multiple shields
+            activePowerups['shield'] = true;
+            // Add shield effect (e.g., a glowing circle around the spaceship)
+            const shield = document.createElement('div');
+            shield.classList.add('explosion'); // Reusing explosion style for simplicity
+            shield.style.width = '60px';
+            shield.style.height = '60px';
+            shield.style.left = `${ship.x - 10}px`;
+            shield.style.top = `${ship.y - 10}px`;
+            shield.style.background = 'rgba(0, 255, 255, 0.3)';
+            shield.style.border = '2px solid #0ff';
+            shield.style.animation = 'shieldPulse 2s infinite';
+            gameContainer.appendChild(shield);
+            activePowerups['shieldElement'] = shield;
+
+            // Shield pulse animation
+            const styleSheet = document.styleSheets[0];
+            if (!Array.from(styleSheet.cssRules).some(rule => rule.name === 'shieldPulse')) {
+                styleSheet.insertRule(`
+                    @keyframes shieldPulse {
+                        0% { transform: scale(1); opacity: 0.5; }
+                        50% { transform: scale(1.5); opacity: 0.3; }
+                        100% { transform: scale(1); opacity: 0.5; }
+                    }
+                `, styleSheet.cssRules.length);
+            }
+
+            // Duration of shield effect
+            setTimeout(() => {
+                // Remove shield effect
+                if (gameContainer.contains(shield)) {
+                    gameContainer.removeChild(shield);
+                }
+                delete activePowerups['shield'];
+                delete activePowerups['shieldElement'];
+            }, 10000); // 10 seconds
+        }
+
+        // Activate Rapid Fire
+        function activateRapidFire() {
+            if (activePowerups['rapid_fire']) return; // Prevent multiple rapid fires
+            activePowerups['rapid_fire'] = true;
+            const originalCooldown = SHOOT_COOLDOWN;
+            const rapidCooldown = 100; // Faster shoot cooldown
+
+            // Modify shootLaser function temporarily
+            const originalShootLaser = shootLaser;
+            shootLaser = function() {
+                if (!shootAvailable) return;
+                shootAvailable = false;
+                setTimeout(() => {
+                    shootAvailable = true;
+                }, rapidCooldown);
+
+                const laser = document.createElement('div');
+                laser.classList.add('laser');
+                laser.style.left = '50%';
+                laser.style.top = '0';
+                spaceship.appendChild(laser);
+                lasers.push({
+                    element: laser,
+                    x: ship.x + ship.width / 2 - 2, // Center of the ship
+                    y: ship.y - ship.height / 2,
+                    width: 4,
+                    height: 10,
+                    velocityY: -15 // Increased speed for faster travel
+                });
+
+                // Play shoot sound
+                shootSound.currentTime = 0;
+                shootSound.play();
+            };
+
+            // Duration of rapid fire effect
+            setTimeout(() => {
+                // Restore original shootLaser function
+                shootLaser = originalShootLaser;
+                delete activePowerups['rapid_fire'];
+            }, 10000); // 10 seconds
+        }
+
+        // Activate Speed Boost
+        function activateSpeedBoost() {
+            if (activePowerups['speed_boost']) return; // Prevent multiple speed boosts
+            activePowerups['speed_boost'] = true;
+            const originalAcceleration = ship.acceleration;
+            ship.acceleration = 0.4; // Increased acceleration
+            ship.friction = 0.02; // Reduced friction for smoother movement
+
+            // Duration of speed boost effect
+            setTimeout(() => {
+                ship.acceleration = originalAcceleration;
+                ship.friction = 0.05;
+                delete activePowerups['speed_boost'];
+            }, 10000); // 10 seconds
+        }
+
+        // Spawn Boss Asteroid
+        function spawnBossAsteroid() {
+            if (bossActive) return; // Only one boss at a time
+
+            const size = 100;
+            const edge = Math.floor(Math.random() * 4);
+            let x, y, directionX, directionY;
+
+            switch(edge) {
+                case 0: // Top
+                    x = Math.random() * (GAME_WIDTH - size);
+                    y = -size;
+                    directionX = 0;
+                    directionY = 1;
+                    break;
+                case 1: // Right
+                    x = GAME_WIDTH + size;
+                    y = Math.random() * (GAME_HEIGHT - size);
+                    directionX = -0.5;
+                    directionY = 0;
+                    break;
+                case 2: // Bottom
+                    x = Math.random() * (GAME_WIDTH - size);
+                    y = GAME_HEIGHT + size;
+                    directionX = 0;
+                    directionY = -1;
+                    break;
+                case 3: // Left
+                    x = -size;
+                    y = Math.random() * (GAME_HEIGHT - size);
+                    directionX = 0.5;
+                    directionY = 0;
+                    break;
+            }
+
+            const speed = 1.5; // Slower speed for boss
+            const rotationSpeed = 1;
+
+            const boss = document.createElement('div');
+            boss.classList.add('boss-asteroid');
+            boss.style.width = `${size}px`;
+            boss.style.height = `${size}px`;
+            boss.style.left = `${x}px`;
+            boss.style.top = `${y}px`;
+            boss.style.transform = `rotate(${Math.random() * 360}deg)`;
+
+            gameContainer.appendChild(boss);
+            bossAsteroid = {
+                element: boss,
+                x: x,
+                y: y,
+                size: size,
+                velocityX: directionX * speed,
+                velocityY: directionY * speed,
+                rotation: Math.random() * 360,
+                rotationSpeed: rotationSpeed,
+                health: 20 // Boss health
+            };
+            asteroids.push(bossAsteroid);
+            bossActive = true;
+        }
+
+        // Update Asteroids (including boss behavior)
+        function updateAsteroids(delta) {
+            // Spawn new asteroids based on interval
+            if (Date.now() - lastAsteroidSpawn > asteroidInterval) {
+                spawnAsteroid();
+                lastAsteroidSpawn = Date.now();
+            }
+
+            asteroids.forEach((asteroid, index) => {
+                asteroid.x += asteroid.velocityX;
+                asteroid.y += asteroid.velocityY;
+                asteroid.rotation += asteroid.rotationSpeed;
+                asteroid.element.style.left = `${asteroid.x}px`;
+                asteroid.element.style.top = `${asteroid.y}px`;
+                asteroid.element.style.transform = `rotate(${asteroid.rotation}deg)`;
+
+                // If it's a boss asteroid, maybe have it shoot lasers or have special behavior
+                if (asteroid.classList.contains('boss-asteroid')) {
+                    // Example: Boss shoots a laser every few seconds
+                    if (!asteroid.lastBossShot) asteroid.lastBossShot = Date.now();
+                    if (Date.now() - asteroid.lastBossShot > 2000) { // Every 2 seconds
+                        shootBossLaser(asteroid);
+                        asteroid.lastBossShot = Date.now();
+                    }
+                }
+
+                // Remove asteroids that are out of bounds
+                if (asteroid.x < -asteroid.size * 2 || asteroid.x > GAME_WIDTH + asteroid.size * 2 ||
+                    asteroid.y < -asteroid.size * 2 || asteroid.y > GAME_HEIGHT + asteroid.size * 2) {
+                    gameContainer.removeChild(asteroid.element);
+                    asteroids.splice(index, 1);
+                    if (asteroid === bossAsteroid) {
+                        bossActive = false;
+                        bossAsteroid = null;
+                    }
+                }
+            });
+        }
+
+        // Shoot Boss Laser
+        function shootBossLaser(boss) {
+            const laser = document.createElement('div');
+            laser.classList.add('laser');
+            laser.style.width = '6px'; // Thicker laser for boss
+            laser.style.height = '20px'; // Longer laser
+            laser.style.background = 'rgba(255, 0, 0, 0.8)'; // Semi-transparent red
+            laser.style.borderRadius = '3px';
+            laser.style.left = '50%';
+            laser.style.top = '0';
+            gameContainer.appendChild(laser);
+            lasers.push({
+                element: laser,
+                x: boss.x + boss.size / 2 - 3, // Center of the boss
+                y: boss.y + boss.size,
+                width: 6,
+                height: 20,
+                velocityY: 10 // Laser moves downward
             });
         }
 
@@ -1030,6 +1965,11 @@
 
         // Lose Life
         function loseLife() {
+            if (activePowerups['shield']) {
+                // If shield is active, consume it instead of losing a life
+                deactivateShield();
+                return;
+            }
             lives--;
             updateHUD();
             if (lives <= 0) {
@@ -1037,10 +1977,21 @@
             }
         }
 
+        // Deactivate Shield
+        function deactivateShield() {
+            if (activePowerups['shieldElement']) {
+                gameContainer.removeChild(activePowerups['shieldElement']);
+                delete activePowerups['shieldElement'];
+            }
+            delete activePowerups['shield'];
+        }
+
         // Update HUD
         function updateHUD() {
             // Update score
             scoreElement.textContent = `Score: ${score}`;
+            // Update high score
+            highScoreElement.textContent = `High Score: ${highScore}`;
             // Update lives
             let livesHTML = 'Lives: ';
             for (let i = 0; i < MAX_LIVES; i++) {
@@ -1057,7 +2008,9 @@
         function endGame() {
             gameOver = true;
             finalScore.textContent = `Your Score: ${score}`;
+            finalHighScore.textContent = `High Score: ${highScore}`;
             gameOverScreen.style.display = 'flex';
+            backgroundMusic.pause();
         }
 
         // Restart Game
@@ -1072,12 +2025,16 @@
             shootAvailable = true;
             hyperspaceAvailable = true;
             hyperspaceLastUsed = 0;
+            currentLevel = 1;
+            lastLevelUp = Date.now();
+            shootLaser = originalShootLaserFunction(); // Ensure shootLaser is reset
             scoreElement.textContent = `Score: ${score}`;
             livesElement.innerHTML = 'Lives: &#10084;&#10084;&#10084;';
+            highScoreElement.textContent = `High Score: ${highScore}`;
             hyperspaceBar.style.width = '100%';
             hyperspaceButton.disabled = false;
 
-            // Remove existing asteroids, fragments, lasers, explosions, and meteors
+            // Remove existing asteroids, fragments, lasers, explosions, meteors, and power-ups
             asteroids.forEach(ast => {
                 if (gameContainer.contains(ast.element)) {
                     gameContainer.removeChild(ast.element);
@@ -1089,8 +2046,8 @@
                 }
             });
             lasers.forEach(laser => {
-                if (spaceship.contains(laser.element)) {
-                    spaceship.removeChild(laser.element);
+                if (gameContainer.contains(laser.element)) {
+                    gameContainer.removeChild(laser.element);
                 }
             });
             explosions.forEach(exp => {
@@ -1103,11 +2060,18 @@
                     gameContainer.removeChild(meteor);
                 }
             });
+            powerups.forEach(powerup => {
+                if (gameContainer.contains(powerup)) {
+                    gameContainer.removeChild(powerup);
+                }
+            });
             asteroids = [];
             fragments = [];
             lasers = [];
             explosions = [];
             meteors = [];
+            powerups = [];
+            activePowerups = {};
 
             // Reset spaceship position and velocity
             ship.x = GAME_WIDTH / 2;
@@ -1120,18 +2084,57 @@
             // Hide game over screen
             gameOverScreen.style.display = 'none';
 
+            // Restart background music
+            backgroundMusic.currentTime = 0;
+            backgroundMusic.play();
+
             // Restart game loop
             lastFrameTime = Date.now();
             requestAnimationFrame(gameLoop);
         }
 
+        // Original shootLaser function backup
+        function originalShootLaserFunction() {
+            return function() {
+                if (!shootAvailable) return;
+                shootAvailable = false;
+                setTimeout(() => {
+                    shootAvailable = true;
+                }, SHOOT_COOLDOWN);
+
+                const laser = document.createElement('div');
+                laser.classList.add('laser');
+                laser.style.left = '50%';
+                laser.style.top = '0';
+                spaceship.appendChild(laser);
+                lasers.push({
+                    element: laser,
+                    x: ship.x + ship.width / 2 - 2, // Center of the ship
+                    y: ship.y - ship.height / 2,
+                    width: 4,
+                    height: 10,
+                    velocityY: -15 // Increased speed for faster travel
+                });
+
+                // Play shoot sound
+                shootSound.currentTime = 0;
+                shootSound.play();
+            };
+        }
+
+        // Initialize the original shootLaser function
+        const originalShootLaser = shootLaser;
+        shootLaser = originalShootLaserFunction();
+
         // Increase Difficulty Over Time
         function increaseDifficulty() {
-            // Every 30 seconds, increase asteroid speed and spawn rate
-            const difficultyInterval = 30000;
-            if (Date.now() - lastAsteroidSpawn > difficultyInterval) {
-                asteroidInterval = Math.max(800, asteroidInterval - 200);
-                lastAsteroidSpawn = Date.now();
+            // Level up every LEVEL_UP_INTERVAL milliseconds
+            if (Date.now() - lastLevelUp > LEVEL_UP_INTERVAL) {
+                currentLevel++;
+                asteroidInterval = Math.max(800, asteroidInterval - 200); // Increase spawn rate
+                ASTEROID_SPEED_MIN += 0.5; // Increase minimum asteroid speed
+                ASTEROID_SPEED_MAX += 0.5; // Increase maximum asteroid speed
+                lastLevelUp = Date.now();
             }
         }
 
@@ -1144,15 +2147,15 @@
             hyperspaceBar.style.width = '0%';
 
             // Teleport to random location
-            const newX = Math.random() * GAME_WIDTH;
-            const newY = Math.random() * GAME_HEIGHT;
+            const newX = Math.random() * (GAME_WIDTH - ship.width);
+            const newY = Math.random() * (GAME_HEIGHT - ship.height);
             ship.x = newX;
             ship.y = newY;
             spaceship.style.left = `${ship.x}px`;
             spaceship.style.top = `${ship.y}px`;
 
             // Create a brief flash effect
-            createFlash(newX, newY);
+            createFlash(newX + ship.width / 2, newY + ship.height / 2);
 
             // Chance of malfunction
             if (Math.random() < HYPERSPACE_CHANCE) {
@@ -1162,31 +2165,32 @@
                 asteroid.classList.add('asteroid');
                 asteroid.style.width = `${size}px`;
                 asteroid.style.height = `${size}px`;
-                asteroid.style.left = `${ship.x}px`;
-                asteroid.style.top = `${ship.y}px`;
+                asteroid.style.left = `${ship.x + ship.width / 2 - size / 2}px`;
+                asteroid.style.top = `${ship.y + ship.height / 2 - size / 2}px`;
                 asteroid.style.transform = `rotate(${Math.random() * 360}deg)`;
                 // Assign varying shades of gray with translucency
                 const grayShade = Math.floor(Math.random() * 256);
                 const opacity = Math.random() * 0.5 + 0.3; // Opacity between 0.3 and 0.8
                 asteroid.style.background = `rgba(${grayShade}, ${grayShade}, ${grayShade}, ${opacity})`;
-                // Removed clip-path to make asteroid perfectly circular
-                // asteroid.style.clipPath = getRandomClipPath(); // Assign irregular shape
                 asteroid.style.animationDuration = `${Math.random() * 5 + 5}s`;
+                asteroid.style.border = '2px solid white'; // Ensure outline
 
                 gameContainer.appendChild(asteroid);
                 asteroids.push({
                     element: asteroid,
-                    x: ship.x,
-                    y: ship.y,
+                    x: ship.x + ship.width / 2 - size / 2,
+                    y: ship.y + ship.height / 2 - size / 2,
                     size: size,
                     velocityX: (Math.random() < 0.5 ? 1 : -1) * (ASTEROID_SPEED_MIN + Math.random() * ASTEROID_SPEED_MAX),
                     velocityY: (Math.random() < 0.5 ? 1 : -1) * (ASTEROID_SPEED_MIN + Math.random() * ASTEROID_SPEED_MAX),
                     rotation: Math.random() * 360,
-                    rotationSpeed: (Math.random() - 0.5) * 2
+                    rotationSpeed: (Math.random() - 0.5) * 2,
+                    health: 1 // Asteroid health
                 });
 
                 // Create explosion due to malfunction
-                createExplosion(ship.x, ship.y, size);
+                createExplosion(asteroid.x + size / 2, asteroid.y + size / 2, size);
+                spawnParticles(asteroid.x + size / 2, asteroid.y + size / 2);
             }
         }
 
