@@ -144,11 +144,11 @@
         .asteroid {
             position: absolute;
             background: gray;
-            border-radius: 50%;
+            border-radius: 50%; /* Ensures the asteroid is perfectly circular */
             opacity: 0.7; /* Reduced opacity for translucency */
             animation: rotateAsteroid linear infinite;
-            border: 1px solid white; /* White outline for retro look */
-            /* Irregular shape will be applied via JavaScript using clip-path */
+            border: 2px solid white; /* Increased border thickness for better visibility */
+            /* Removed clip-path to make asteroids perfectly circular */
             box-shadow: 0 0 5px rgba(255, 255, 255, 0.5); /* Subtle shadow for depth */
         }
         @keyframes rotateAsteroid {
@@ -731,18 +731,18 @@
             });
         }
 
-        // Generate a Random Irregular Clip-Path for Asteroids
-        function getRandomClipPath() {
-            const numPoints = Math.floor(Math.random() * 4) + 5; // 5 to 8 points
-            let points = '';
-            for (let i = 0; i < numPoints; i++) {
-                const x = Math.random() * 100;
-                const y = Math.random() * 100;
-                points += `${x}% ${y}%, `;
-            }
-            points = points.slice(0, -2);
-            return `polygon(${points})`;
-        }
+        // Generate a Random Irregular Clip-Path for Asteroids (Removed for Rounder Shape)
+        // function getRandomClipPath() {
+        //     const numPoints = Math.floor(Math.random() * 4) + 5; // 5 to 8 points
+        //     let points = '';
+        //     for (let i = 0; i < numPoints; i++) {
+        //         const x = Math.random() * 100;
+        //         const y = Math.random() * 100;
+        //         points += `${x}% ${y}%, `;
+        //     }
+        //     points = points.slice(0, -2);
+        //     return `polygon(${points})`;
+        // }
 
         // Spawn Asteroids
         function spawnAsteroid() {
@@ -791,7 +791,8 @@
             const grayShade = Math.floor(Math.random() * 256);
             const opacity = Math.random() * 0.5 + 0.3; // Opacity between 0.3 and 0.8
             asteroid.style.background = `rgba(${grayShade}, ${grayShade}, ${grayShade}, ${opacity})`;
-            asteroid.style.clipPath = getRandomClipPath(); // Assign irregular shape
+            // Removed clip-path to make asteroids perfectly circular
+            // asteroid.style.clipPath = getRandomClipPath(); // Assign irregular shape
             asteroid.style.animationDuration = `${Math.random() * 5 + 5}s`; // Random rotation speed
 
             gameContainer.appendChild(asteroid);
@@ -928,7 +929,8 @@
             const grayShade = Math.floor(Math.random() * 256);
             const opacity = Math.random() * 0.5 + 0.3; // Opacity between 0.3 and 0.8
             fragment.style.background = `rgba(${grayShade}, ${grayShade}, ${grayShade}, ${opacity})`;
-            fragment.style.clipPath = getRandomClipPath(); // Assign irregular shape
+            // Removed clip-path to make fragments perfectly circular
+            // fragment.style.clipPath = getRandomClipPath(); // Assign irregular shape
             fragment.style.animationDuration = `${Math.random() * 5 + 5}s`; // Random rotation speed
 
             gameContainer.appendChild(fragment);
@@ -1167,7 +1169,8 @@
                 const grayShade = Math.floor(Math.random() * 256);
                 const opacity = Math.random() * 0.5 + 0.3; // Opacity between 0.3 and 0.8
                 asteroid.style.background = `rgba(${grayShade}, ${grayShade}, ${grayShade}, ${opacity})`;
-                asteroid.style.clipPath = getRandomClipPath(); // Assign irregular shape
+                // Removed clip-path to make asteroid perfectly circular
+                // asteroid.style.clipPath = getRandomClipPath(); // Assign irregular shape
                 asteroid.style.animationDuration = `${Math.random() * 5 + 5}s`;
 
                 gameContainer.appendChild(asteroid);
